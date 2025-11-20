@@ -83,7 +83,7 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
     <div className="flex flex-col w-full h-screen bg-red-50 font-sans relative overflow-hidden">
       
       {/* --- HEADER (Fijo arriba) --- */}
-      <div className="pt-12 pb-4 px-6 flex justify-between items-center shrink-0 bg-red-50 z-20 relative">
+      <div className="pt-12 pb-4 px-6 flex justify-between items-center shrink-0 shadow-sm z-20 relative bg-red-50"> {/* Fondo coincide con body */}
         <div className="flex-1 mr-4">
           {isSearchOpen ? (
             <div className="flex items-center bg-white rounded-full px-4 py-2 animate-fade-in shadow-sm">
@@ -101,20 +101,14 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-3 animate-fade-in">
-              
-              {/* --- AVATAR CLICABLE (AQUÍ ESTÁ EL CAMBIO) --- */}
-              <div 
-                onClick={() => onNavigate('profile')} // Navegar al perfil
-                className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm bg-gray-100 cursor-pointer active:scale-90 transition-transform"
-              >
+            <div className="flex items-center gap-3 animate-fade-in cursor-pointer" onClick={() => onNavigate('profile')}> 
+              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm bg-gray-100">
                 {user?.photoURL ? (
                   <img src={user.photoURL} alt="User" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-400"><User /></div>
                 )}
               </div>
-              
               <h1 className="text-lg font-bold text-gray-800 drop-shadow-sm">Hola, {displayName}!</h1>
             </div>
           )}
@@ -136,7 +130,7 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
         </div>
       </div>
 
-      {/* --- FILTRO --- */}
+      {/* --- FILTRO DESPLEGABLE (Fijo arriba) --- */}
       <div className="px-6 py-2 bg-red-50 z-10 relative shrink-0 mb-2">
         <div className="relative">
           <button 
@@ -171,8 +165,9 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
         </div>
       </div>
 
-      {/* --- LISTA DE EVENTOS --- */}
-      <div className="flex-1 w-full overflow-y-auto px-4 pb-32 space-y-6 scroll-smooth">
+      {/* --- LISTA DE EVENTOS (Ocupa el espacio restante) --- */}
+      {/* CLAVE: 'flex-1' expande este div. 'overflow-y-auto' permite scroll interno. 'h-full' no es necesario con flex-1 pero refuerza. */}
+      <div className="flex-1 w-full overflow-y-auto px-4 pb-32 space-y-5 scroll-smooth">
         
         {filteredEvents.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center opacity-80 -mt-10">
@@ -197,24 +192,29 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
             <div 
               key={evt.id} 
               onClick={() => onSelectEvent(evt)}
+              /* CLAVE: min-h-[450px] fuerza la altura. w-full asegura ancho completo. */
               className="relative overflow-hidden w-full min-h-[450px] bg-gradient-to-br from-orange-400 to-orange-600 rounded-[2.5rem] p-8 text-white shadow-xl cursor-pointer transform transition hover:scale-[1.01] active:scale-[0.99] flex flex-col justify-between"
             >
+              {/* Decoración de Fondo */}
               <PartyPopper className="absolute top-8 left-6 text-white opacity-20 rotate-[-15deg]" size={40} />
               <Cake className="absolute bottom-8 right-6 text-white opacity-20 rotate-[10deg]" size={64} />
               <div className="absolute top-0 right-0 w-48 h-48 bg-white opacity-10 rounded-bl-full pointer-events-none blur-xl"></div>
 
+              {/* Contenido Superior */}
               <div className="relative z-10 flex justify-center mt-4">
                 <span className="bg-black/20 px-6 py-2 rounded-full text-xs font-bold uppercase tracking-widest backdrop-blur-md border border-white/10 shadow-sm">
                   {evt.type}
                 </span>
               </div>
 
+              {/* Contenido Central (Título Grande) */}
               <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center my-6 px-2">
                 <h3 className="text-5xl font-black leading-none mb-4 drop-shadow-lg tracking-tighter line-clamp-4 break-words w-full">
                   {evt.name}
                 </h3>
               </div>
               
+              {/* Contenido Inferior (Detalles) */}
               <div className="relative z-10 flex flex-col gap-3 text-orange-50 text-base font-medium w-full mb-4">
                 <div className="flex items-center justify-center gap-3 bg-black/10 px-6 py-4 rounded-3xl backdrop-blur-sm border border-white/5 w-full shadow-inner">
                   <Calendar size={20} className="shrink-0" />
@@ -237,7 +237,7 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
         )}
       </div>
 
-      {/* FAB */}
+      {/* FAB Crear (Flotante) */}
       {filteredEvents.length > 0 && filterType === 'upcoming' && (
         <button 
           onClick={() => onNavigate('create')}
@@ -247,7 +247,7 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
         </button>
       )}
 
-      {/* NOTIFICACIONES */}
+      {/* --- MODAL NOTIFICACIONES --- */}
       {showNotifications && (
         <div className="fixed inset-0 z-50 flex justify-end animate-fade-in">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setShowNotifications(false)}></div>
