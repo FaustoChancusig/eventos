@@ -8,6 +8,8 @@ import HomePage from './pages/HomePage';
 import CreateEventPage from './pages/CreateEventPage';
 import EventDetailPage from './pages/EventDetailPage';
 import NotificationsPage from './pages/NotificationsPage'; // <--- Asegúrate de tener este archivo
+import ProfilePage from './pages/ProfilePage';
+
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -83,8 +85,17 @@ export default function App() {
           onBack={() => setView('home')} 
         />
       );
+      case 'profile':
+      return (
+        <ProfilePage 
+          user={user} 
+          onBack={() => setView('home')} 
+        />
+      );
 
     default:
       return <div className="p-10">Error: Vista no encontrada ({view})</div>;
   }
+
+  
 }
