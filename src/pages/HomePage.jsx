@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, deleteDoc, or } from 'firebase/firestore';
 import { db } from '../config/firebase'; 
 import { 
   Search, Bell, Calendar, MapPin, Clock, User, 
-  ChevronDown, Filter, PartyPopper, Gift, Cake, X, Check 
+  ChevronDown, Filter, PartyPopper, Gift, Cake, X, Check, Crown
 } from 'lucide-react';
 
 export default function HomePage({ user, onNavigate, onSelectEvent }) {
@@ -18,16 +18,36 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [hasNewNotifs, setHasNewNotifs] = useState(false);
 
-  // 1. Cargar Eventos
+  // 1. Cargar Eventos (Propios + Invitaciones)
   useEffect(() => {
     if (!user) return;
-    const q = query(collection(db, 'events'), where("creatorId", "==", user.uid));
+
+    // CAMBIO IMPORTANTE: Usamos 'or' para traer eventos creados POR MÍ o donde YO esté invitado
+    const q = query(
+      collection(db, 'events'), 
+      or(
+        where("creatorId", "==", user.uid),
+        where("guestIds", "array-contains", user.uid) // Este campo lo crearemos en el siguiente paso
+      )
+    );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const eventsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const eventsData = snapshot.docs.map(doc => ({ 
+        id: doc.id, 
+        ...doc.data(),
+        // Calculamos si soy el dueño para usarlo en la UI
+        isMyEvent: doc.data().creatorId === user.uid 
+      }));
+      
+      // Ordenar por fecha
       eventsData.sort((a, b) => new Date(a.date) - new Date(b.date));
       setEvents(eventsData);
+    }, (error) => {
+      console.error("Error cargando eventos:", error);
+      // Si ves un error de "indexes" en la consola, es porque Firebase pide crear un índice para esta consulta compuesta.
+      // Simplemente abre el link que te saldrá en la consola del navegador.
     });
+
     return () => unsubscribe();
   }, [user]);
 
@@ -45,28 +65,12 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
     return () => unsubscribe();
   }, [user]);
 
-  // Acciones de Notificación
-  const handleAcceptNotif = async (notification) => {
-    try {
-      const eventRef = doc(db, 'events', notification.eventId);
-      await updateDoc(eventRef, {
-        attendees: arrayUnion({
-          name: user.displayName || 'Usuario',
-          phone: user.phoneNumber || 'App',
-          status: 'confirmed'
-        })
-      });
-      await deleteDoc(doc(db, 'users', user.uid, 'notifications', notification.id));
-      alert(`¡Asistirás a ${notification.eventName}!`);
-    } catch (error) {
-      console.error(error);
-      alert("Error al aceptar.");
-    }
-  };
-
-  const handleRejectNotif = async (id) => {
-    if(!window.confirm("¿Rechazar?")) return;
-    await deleteDoc(doc(db, 'users', user.uid, 'notifications', id));
+  // Acciones de Notificación (Simplificado aquí, la lógica completa irá en NotificationsPage o se maneja aquí si prefieres un acceso rápido)
+  // NOTA: Para mantener la consistencia con tu nueva lógica de 3 estados, te recomiendo que al dar clic en una notificación
+  // en este popup, simplemente redirija a la página de notificaciones completa.
+  const handleQuickViewNotif = () => {
+    setShowNotifications(false);
+    onNavigate('notifications');
   };
 
   // Filtrado
@@ -83,7 +87,7 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
     <div className="flex flex-col w-full h-screen bg-red-50 font-sans relative overflow-hidden">
       
       {/* --- HEADER (Fijo arriba) --- */}
-      <div className="pt-12 pb-4 px-6 flex justify-between items-center shrink-0 shadow-sm z-20 relative bg-red-50"> {/* Fondo coincide con body */}
+      <div className="pt-12 pb-4 px-6 flex justify-between items-center shrink-0 bg-red-50 z-20 relative">
         <div className="flex-1 mr-4">
           {isSearchOpen ? (
             <div className="flex items-center bg-white rounded-full px-4 py-2 animate-fade-in shadow-sm">
@@ -101,8 +105,11 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-3 animate-fade-in cursor-pointer" onClick={() => onNavigate('profile')}> 
-              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm bg-gray-100">
+            <div className="flex items-center gap-3 animate-fade-in">
+              <div 
+                onClick={() => onNavigate('profile')}
+                className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm bg-gray-100 cursor-pointer active:scale-90 transition-transform"
+              >
                 {user?.photoURL ? (
                   <img src={user.photoURL} alt="User" className="w-full h-full object-cover" />
                 ) : (
@@ -130,7 +137,7 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
         </div>
       </div>
 
-      {/* --- FILTRO DESPLEGABLE (Fijo arriba) --- */}
+      {/* --- FILTRO --- */}
       <div className="px-6 py-2 bg-red-50 z-10 relative shrink-0 mb-2">
         <div className="relative">
           <button 
@@ -165,9 +172,8 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
         </div>
       </div>
 
-      {/* --- LISTA DE EVENTOS (Ocupa el espacio restante) --- */}
-      {/* CLAVE: 'flex-1' expande este div. 'overflow-y-auto' permite scroll interno. 'h-full' no es necesario con flex-1 pero refuerza. */}
-      <div className="flex-1 w-full overflow-y-auto px-4 pb-32 space-y-5 scroll-smooth">
+      {/* --- LISTA DE EVENTOS --- */}
+      <div className="flex-1 w-full overflow-y-auto px-4 pb-32 space-y-6 scroll-smooth">
         
         {filteredEvents.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center opacity-80 -mt-10">
@@ -192,29 +198,36 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
             <div 
               key={evt.id} 
               onClick={() => onSelectEvent(evt)}
-              /* CLAVE: min-h-[450px] fuerza la altura. w-full asegura ancho completo. */
-              className="relative overflow-hidden w-full min-h-[450px] bg-gradient-to-br from-orange-400 to-orange-600 rounded-[2.5rem] p-8 text-white shadow-xl cursor-pointer transform transition hover:scale-[1.01] active:scale-[0.99] flex flex-col justify-between"
+              className={`relative overflow-hidden w-full min-h-[450px] rounded-[2.5rem] p-8 text-white shadow-xl cursor-pointer transform transition hover:scale-[1.01] active:scale-[0.99] flex flex-col justify-between
+                ${evt.isMyEvent ? 'bg-gradient-to-br from-orange-400 to-orange-600' : 'bg-gradient-to-br from-purple-500 to-indigo-600'}
+              `}
             >
-              {/* Decoración de Fondo */}
               <PartyPopper className="absolute top-8 left-6 text-white opacity-20 rotate-[-15deg]" size={40} />
               <Cake className="absolute bottom-8 right-6 text-white opacity-20 rotate-[10deg]" size={64} />
               <div className="absolute top-0 right-0 w-48 h-48 bg-white opacity-10 rounded-bl-full pointer-events-none blur-xl"></div>
 
-              {/* Contenido Superior */}
-              <div className="relative z-10 flex justify-center mt-4">
-                <span className="bg-black/20 px-6 py-2 rounded-full text-xs font-bold uppercase tracking-widest backdrop-blur-md border border-white/10 shadow-sm">
+              {/* BADGE: ANFITRION vs INVITADO */}
+              <div className="relative z-10 flex justify-between mt-4 px-2">
+                 <span className="bg-black/20 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest backdrop-blur-md border border-white/10 shadow-sm">
                   {evt.type}
                 </span>
+                {evt.isMyEvent ? (
+                  <span className="bg-orange-500/80 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 border border-white/20">
+                    <Crown size={12} /> Anfitrión
+                  </span>
+                ) : (
+                  <span className="bg-indigo-400/80 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 border border-white/20">
+                    <User size={12} /> Invitado
+                  </span>
+                )}
               </div>
 
-              {/* Contenido Central (Título Grande) */}
               <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center my-6 px-2">
                 <h3 className="text-5xl font-black leading-none mb-4 drop-shadow-lg tracking-tighter line-clamp-4 break-words w-full">
                   {evt.name}
                 </h3>
               </div>
               
-              {/* Contenido Inferior (Detalles) */}
               <div className="relative z-10 flex flex-col gap-3 text-orange-50 text-base font-medium w-full mb-4">
                 <div className="flex items-center justify-center gap-3 bg-black/10 px-6 py-4 rounded-3xl backdrop-blur-sm border border-white/5 w-full shadow-inner">
                   <Calendar size={20} className="shrink-0" />
@@ -237,8 +250,8 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
         )}
       </div>
 
-      {/* FAB Crear (Flotante) */}
-      {filteredEvents.length > 0 && filterType === 'upcoming' && (
+      {/* FAB: Solo si estás en Upcoming */}
+      {filterType === 'upcoming' && (
         <button 
           onClick={() => onNavigate('create')}
           className="absolute bottom-8 right-6 w-16 h-16 bg-white text-orange-500 rounded-full shadow-2xl border border-orange-100 flex items-center justify-center z-30 active:scale-90 hover:bg-gray-50 transition-transform"
@@ -247,7 +260,7 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
         </button>
       )}
 
-      {/* --- MODAL NOTIFICACIONES --- */}
+      {/* NOTIFICACIONES MINI (Overlay) */}
       {showNotifications && (
         <div className="fixed inset-0 z-50 flex justify-end animate-fade-in">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setShowNotifications(false)}></div>
@@ -280,10 +293,13 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
                         <p className="font-bold text-orange-600 text-lg">{notif.eventName}</p>
                       </div>
                     </div>
-                    <div className="flex gap-3 mt-1">
-                      <button onClick={() => handleAcceptNotif(notif)} className="flex-1 bg-orange-500 text-white py-2.5 rounded-xl text-xs font-bold active:scale-95 shadow-md shadow-orange-200 transition">Aceptar</button>
-                      <button onClick={() => handleRejectNotif(notif.id)} className="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-xl text-xs font-bold active:scale-95 hover:bg-gray-200 transition">Rechazar</button>
-                    </div>
+                    {/* Botón unificado para gestionar */}
+                    <button 
+                      onClick={handleQuickViewNotif} 
+                      className="w-full bg-orange-500 text-white py-2.5 rounded-xl text-xs font-bold active:scale-95 shadow-md shadow-orange-200 transition"
+                    >
+                      Responder Invitación
+                    </button>
                   </div>
                 ))
               )}

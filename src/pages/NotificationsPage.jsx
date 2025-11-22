@@ -1,24 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { Bell, Check, X, User, ArrowLeft } from 'lucide-react';
+import { Bell, Check, X, User, ArrowLeft, HelpCircle } from 'lucide-react';
 
 export default function NotificationsPage({ user, onBack }) {
   const [notifications, setNotifications] = useState([]);
 
-  // 1. Escuchar notificaciones en tiempo real
+  // 1. Escuchar notificaciones
   useEffect(() => {
     if (!user) return;
     
-    // Buscamos en la subcolección 'notifications' de mi usuario
     const q = query(
       collection(db, 'users', user.uid, 'notifications'),
-      where('status', '==', 'pending') // Solo las pendientes
+      where('status', '==', 'pending')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      // Ordenar por fecha (más nuevas primero)
       notifs.sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds);
       setNotifications(notifs);
     });
@@ -26,36 +24,48 @@ export default function NotificationsPage({ user, onBack }) {
     return () => unsubscribe();
   }, [user]);
 
-  // 2. Aceptar Invitación
-  const handleAccept = async (notification) => {
+  // 2. Responder Invitación (Maneja los 3 estados)
+  const handleResponse = async (notification, status) => {
+    // status puede ser: 'confirmed' | 'maybe' | 'declined'
+    
     try {
-      // A. Agregarnos a la lista de asistentes del evento real
       const eventRef = doc(db, 'events', notification.eventId);
-      await updateDoc(eventRef, {
-        attendees: arrayUnion({
-          name: user.displayName || 'Usuario',
-          phone: user.phoneNumber || 'App', // O el dato que tengas
-          status: 'confirmed'
-        })
-      });
+      
+      // Datos del invitado
+      const guestData = {
+        uid: user.uid, // Guardamos el UID para poder buscarlo luego
+        name: user.displayName || 'Usuario',
+        phone: user.phoneNumber || 'App',
+        status: status, // 'confirmed', 'maybe', 'declined'
+        respondedAt: new Date().toISOString()
+      };
 
-      // B. Marcar notificación como vista/aceptada (o borrarla)
+      // Objeto de actualización para Firestore
+      let updates = {
+        attendees: arrayUnion(guestData) // Agregamos a la lista visual de invitados
+      };
+
+      // TRUCO CLAVE: Si acepta o pone 'tal vez', agregamos su ID a 'guestIds'
+      // para que el evento aparezca en su HomePage.
+      if (status === 'confirmed' || status === 'maybe') {
+        updates.guestIds = arrayUnion(user.uid);
+      }
+
+      await updateDoc(eventRef, updates);
+
+      // Borramos la notificación porque ya fue atendida
       await deleteDoc(doc(db, 'users', user.uid, 'notifications', notification.id));
       
-      alert(`¡Genial! Has confirmado tu asistencia a ${notification.eventName}`);
-    } catch (error) {
-      console.error("Error al aceptar:", error);
-      alert("El evento quizás ya no existe.");
-    }
-  };
+      // Feedback al usuario
+      if (status === 'declined') {
+        alert("Has rechazado la invitación.");
+      } else {
+        alert(`¡Listo! Has respondido: ${status === 'confirmed' ? 'Asistiré' : 'Tal vez'}`);
+      }
 
-  // 3. Rechazar Invitación
-  const handleReject = async (id) => {
-    if(!window.confirm("¿Rechazar invitación?")) return;
-    try {
-      await deleteDoc(doc(db, 'users', user.uid, 'notifications', id));
     } catch (error) {
-      console.error(error);
+      console.error("Error al responder:", error);
+      alert("Ocurrió un error o el evento ya no existe.");
     }
   };
 
@@ -76,39 +86,63 @@ export default function NotificationsPage({ user, onBack }) {
             <div className="bg-gray-100 p-6 rounded-full mb-4">
               <Bell size={32} className="text-gray-300" />
             </div>
-            <p>No tienes notificaciones nuevas.</p>
+            <p>No tienes notificaciones pendientes.</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {notifications.map(notif => (
-              <div key={notif.id} className="bg-white p-4 rounded-2xl shadow-sm border border-purple-100 flex flex-col gap-3">
+              <div key={notif.id} className="bg-white p-5 rounded-2xl shadow-sm border border-purple-100 flex flex-col gap-4">
                 
-                {/* Encabezado de la Notificación */}
+                {/* Encabezado */}
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 shrink-0">
-                    {notif.fromPhoto ? <img src={notif.fromPhoto} className="w-full h-full rounded-full object-cover"/> : <User size={18}/>}
+                  <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 shrink-0 border-2 border-white shadow-sm">
+                    {notif.fromPhoto ? <img src={notif.fromPhoto} className="w-full h-full rounded-full object-cover"/> : <User size={20}/>}
                   </div>
                   <div>
-                    <p className="text-sm text-gray-800">
-                      <span className="font-bold">{notif.fromName || 'Alguien'}</span> te invitó a su evento:
+                    <p className="text-sm text-gray-600 leading-snug">
+                      <span className="font-bold text-gray-900">{notif.fromName || 'Alguien'}</span> te invita a:
                     </p>
-                    <h3 className="font-bold text-purple-700 text-lg">{notif.eventName}</h3>
+                    <h3 className="font-bold text-purple-700 text-xl mt-1">{notif.eventName}</h3>
                   </div>
                 </div>
 
-                {/* Botones de Acción */}
-                <div className="flex gap-3 mt-1">
+                {/* Botones de Acción (3 Opciones) */}
+                <div className="grid grid-cols-3 gap-2">
+                  {/* 1. ASISTIRÉ */}
                   <button 
-                    onClick={() => handleAccept(notif)}
-                    className="flex-1 bg-purple-600 text-white py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition"
+                    onClick={() => handleResponse(notif, 'confirmed')}
+                    className="flex flex-col items-center justify-center gap-1 bg-green-50 text-green-700 py-3 rounded-xl font-bold text-xs active:scale-95 transition border border-green-100 hover:bg-green-100"
                   >
-                    <Check size={16} /> Asistir
+                    <div className="bg-green-200 p-1.5 rounded-full text-green-800">
+                      <Check size={16} /> 
+                    </div>
+                    Asistiré
                   </button>
+
+                  {/* 2. TAL VEZ */}
                   <button 
-                    onClick={() => handleReject(notif.id)}
-                    className="flex-1 bg-gray-100 text-gray-600 py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition"
+                    onClick={() => handleResponse(notif, 'maybe')}
+                    className="flex flex-col items-center justify-center gap-1 bg-orange-50 text-orange-700 py-3 rounded-xl font-bold text-xs active:scale-95 transition border border-orange-100 hover:bg-orange-100"
                   >
-                    <X size={16} /> Rechazar
+                    <div className="bg-orange-200 p-1.5 rounded-full text-orange-800">
+                      <HelpCircle size={16} /> 
+                    </div>
+                    Tal vez
+                  </button>
+
+                  {/* 3. NO ASISTIRÉ */}
+                  <button 
+                    onClick={() => {
+                      if(window.confirm("¿Seguro que quieres rechazar? La invitación desaparecerá.")) {
+                        handleResponse(notif, 'declined');
+                      }
+                    }}
+                    className="flex flex-col items-center justify-center gap-1 bg-gray-50 text-gray-600 py-3 rounded-xl font-bold text-xs active:scale-95 transition border border-gray-200 hover:bg-gray-100"
+                  >
+                    <div className="bg-gray-200 p-1.5 rounded-full text-gray-600">
+                      <X size={16} /> 
+                    </div>
+                    No iré
                   </button>
                 </div>
 
