@@ -192,72 +192,104 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
         ) : (
           // Contenedor Scroll
           <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 px-4 items-center h-full w-full scrollbar-hide pt-1 pb-4">
-            {filteredEvents.map((evt) => (
-              <div 
-                key={evt.id} 
-                onClick={() => onSelectEvent(evt)}
-                className={`snap-center shrink-0 relative overflow-hidden w-[93%] md:w-[400px] h-[78vh] rounded-[2.5rem] p-5 text-white shadow-2xl shadow-gray-300/50 cursor-pointer transform transition active:scale-[0.98] flex flex-col justify-between
-                  ${evt.isMyEvent ? 'bg-gradient-to-b from-orange-500 to-red-600' : 'bg-gradient-to-b from-purple-600 to-indigo-700'}
-                `}
-              >
-                {/* Decoraciones Fondo */}
-                <div className="absolute top-0 right-0 w-72 h-72 bg-white opacity-10 rounded-bl-full pointer-events-none blur-3xl"></div>
-                <PartyPopper className="absolute top-12 -left-6 text-white opacity-10 rotate-[-15deg]" size={100} />
+            {filteredEvents.map((evt) => {
+              
+              // 🆕 LÓGICA DE FONDO DINÁMICO
+              const hasCustomBg = evt.background;
+              
+              // 1. Definir Clase Base y Estilo
+              let bgClass = "";
+              let bgStyle = {};
 
-                {/* Top: Tipo y Rol */}
-                <div className="relative z-10 flex justify-between items-start">
-                  <span className="bg-black/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest backdrop-blur-md border border-white/10">
-                    {evt.type}
-                  </span>
-                  {evt.isMyEvent ? (
-                    <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm border border-white/10">
-                      <Crown size={16} className="text-white" />
-                    </div>
-                  ) : (
-                    <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm border border-white/10">
-                       <User size={16} className="text-white" />
-                    </div>
+              if (hasCustomBg) {
+                  if (evt.background.type === 'gradient') {
+                      bgClass = `bg-gradient-to-br ${evt.background.value}`;
+                  } else if (evt.background.type === 'image') {
+                      bgClass = "bg-cover bg-center bg-no-repeat";
+                      bgStyle = { backgroundImage: `url(${evt.background.value})` };
+                  }
+              } else {
+                  // Fallback para eventos antiguos sin la propiedad background
+                  bgClass = evt.isMyEvent 
+                    ? 'bg-gradient-to-b from-orange-500 to-red-600' 
+                    : 'bg-gradient-to-b from-purple-600 to-indigo-700';
+              }
+
+              return (
+                <div 
+                  key={evt.id} 
+                  onClick={() => onSelectEvent(evt)}
+                  style={bgStyle}
+                  className={`snap-center shrink-0 relative overflow-hidden w-[93%] md:w-[400px] h-[78vh] rounded-[2.5rem] p-5 text-white shadow-2xl shadow-gray-300/50 cursor-pointer transform transition active:scale-[0.98] flex flex-col justify-between ${bgClass}`}
+                >
+                  
+                  {/* 🆕 OVERLAY OSCURO (Solo si hay imagen personalizada) */}
+                  {hasCustomBg && evt.background.type === 'image' && (
+                      <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] z-0"></div>
                   )}
-                </div>
 
-                {/* Centro: Título Gigante (Ajustado para evitar cortes raros) */}
-                <div className="relative z-10 mt-4 mb-auto flex flex-col justify-center h-full">
-                  <h3 className="text-4xl font-black leading-[1.0] drop-shadow-lg line-clamp-5 text-pretty tracking-tight">
-                    {evt.name}
-                  </h3>
-                </div>
-                
-                {/* Bottom: DATOS (Transparente CLARO) */}
-                <div className="relative z-10 bg-white/10 backdrop-blur-md rounded-[2rem] p-5 border border-white/20 shadow-sm mt-4">
-                     
-                     {/* Fila 1: Fecha Completa (Sin Icono) */}
-                     <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/10">
-                        {/* Se eliminó el icono del calendario que estaba aquí */}
-                        <div className="pl-2">
-                           <p className="text-3xl font-bold leading-none">
-                             {new Date(evt.date + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
-                           </p>
-                           <p className="text-sm text-white/80 font-medium uppercase tracking-wide mt-1">
-                             {new Date(evt.date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long' })}
-                           </p>
-                        </div>
-                     </div>
+                  {/* Decoraciones Fondo (Solo si NO es imagen personalizada para no ensuciarla) */}
+                  {(!hasCustomBg || evt.background.type === 'gradient') && (
+                    <>
+                      <div className="absolute top-0 right-0 w-72 h-72 bg-white opacity-10 rounded-bl-full pointer-events-none blur-3xl z-0"></div>
+                      <PartyPopper className="absolute top-12 -left-6 text-white opacity-10 rotate-[-15deg] z-0" size={100} />
+                    </>
+                  )}
 
-                     {/* Fila 2: Hora y Lugar */}
-                     <div className="grid grid-cols-2 gap-3">
-                        <div className="flex items-center gap-2">
-                           <Clock size={16} className="text-white/70 shrink-0" />
-                           <span className="text-sm font-bold text-white truncate">{evt.time}</span>
-                        </div>
-                        <div className="flex items-center gap-2 overflow-hidden">
-                           <MapPin size={16} className="text-white/70 shrink-0" />
-                           <span className="text-sm font-bold text-white truncate">{evt.locationName || "Ubicación"}</span>
-                        </div>
-                     </div>
-                </div>
+                  {/* Top: Tipo y Rol */}
+                  <div className="relative z-10 flex justify-between items-start">
+                    <span className="bg-black/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest backdrop-blur-md border border-white/10">
+                      {evt.type}
+                    </span>
+                    {evt.isMyEvent ? (
+                      <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm border border-white/10">
+                        <Crown size={16} className="text-white" />
+                      </div>
+                    ) : (
+                      <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm border border-white/10">
+                         <User size={16} className="text-white" />
+                      </div>
+                    )}
+                  </div>
 
-              </div>
-            ))}
+                  {/* Centro: Título Gigante */}
+                  <div className="relative z-10 mt-4 mb-auto flex flex-col justify-center h-full">
+                    <h3 className="text-4xl font-black leading-[1.0] drop-shadow-lg line-clamp-5 text-pretty tracking-tight">
+                      {evt.name}
+                    </h3>
+                  </div>
+                  
+                  {/* Bottom: DATOS */}
+                  <div className="relative z-10 bg-white/10 backdrop-blur-md rounded-[2rem] p-5 border border-white/20 shadow-sm mt-4">
+                      
+                      {/* Fila 1: Fecha */}
+                      <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/10">
+                         <div className="pl-2">
+                            <p className="text-3xl font-bold leading-none">
+                              {new Date(evt.date + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
+                            </p>
+                            <p className="text-sm text-white/80 font-medium uppercase tracking-wide mt-1">
+                              {new Date(evt.date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long' })}
+                            </p>
+                         </div>
+                      </div>
+
+                      {/* Fila 2: Hora y Lugar */}
+                      <div className="grid grid-cols-2 gap-3">
+                         <div className="flex items-center gap-2">
+                            <Clock size={16} className="text-white/70 shrink-0" />
+                            <span className="text-sm font-bold text-white truncate">{evt.time}</span>
+                         </div>
+                         <div className="flex items-center gap-2 overflow-hidden">
+                            <MapPin size={16} className="text-white/70 shrink-0" />
+                            <span className="text-sm font-bold text-white truncate">{evt.locationName || "Ubicación"}</span>
+                         </div>
+                      </div>
+                  </div>
+
+                </div>
+              );
+            })}
             
             {/* Espaciador final */}
             <div className="w-2 shrink-0"></div>

@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, doc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, getDocs, where } from 'firebase/firestore';
-import { db } from '../config/firebase'; 
+// 🆕 IMPORTANTE: Agregar imports de storage aquí
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../config/firebase'; 
 import { Contacts } from '@capacitor-community/contacts'; 
-import { 
-  MapContainer, TileLayer, Marker, useMapEvents, useMap 
-} from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css'; 
 import L from 'leaflet'; 
-import { 
-  MapPin, Calendar, Clock, AlignLeft, ArrowLeft, 
-  Type, AlertCircle, UserPlus, X, Plus, Check, Trash2, Eye, Send, 
-  PartyPopper, Gift, Cake, Save 
-} from 'lucide-react';
+import { MapPin, Calendar, Clock, AlignLeft, ArrowLeft, Type, AlertCircle, Plus, Check, Trash2, Eye, X } from 'lucide-react';
+
+// 🆕 IMPORTAMOS EL NUEVO COMPONENTE
+import EventPreviewModal from '../components/EventPreviewModal';
 
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -24,7 +23,7 @@ let DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-// Componentes Mapa
+// Componentes Mapa (INTACTOS)
 function LocationSelector({ onLocationSelected, position }) {
   useMapEvents({ click(e) { onLocationSelected(e.latlng.lat, e.latlng.lng); }, });
   return position ? <Marker position={position} /> : null;
@@ -40,12 +39,15 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
-  const isEditing = !!eventToEdit; // 🆕 Flag para saber modo
+  const isEditing = !!eventToEdit; 
 
   const [guests, setGuests] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
+  
+  // 🆕 ESTADO PARA EL FONDO (Por defecto el gradiente naranja original)
+  const [backgroundConfig, setBackgroundConfig] = useState({ type: 'gradient', value: 'from-orange-400 to-orange-600' });
 
   const defaultTags = ['Fiesta', 'Reunión', 'Cena', 'Deportes', 'Viaje', 'Trabajo'];
   const [customTags, setCustomTags] = useState([]); 
@@ -56,7 +58,7 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
     name: '', type: 'Fiesta', date: '', time: '', description: '', locationName: '', lat: null, lng: null
   });
 
-  // 🆕 EFECTO: CARGAR DATOS SI ESTAMOS EDITANDO
+  // EFECTO: CARGAR DATOS SI ESTAMOS EDITANDO (INTACTO)
   useEffect(() => {
     if (eventToEdit) {
       setFormData({
@@ -69,11 +71,11 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
         lat: eventToEdit.lat || null,
         lng: eventToEdit.lng || null
       });
-      // Nota: No cargamos invitados en edición para simplificar y no romper estados
+      // Si el evento editado ya tiene fondo, lo cargaríamos aquí (lógica futura)
     }
   }, [eventToEdit]);
 
-  // Cargar Etiquetas
+  // Cargar Etiquetas (INTACTO)
   useEffect(() => {
     if (!user) return;
     const q = query(collection(db, 'users', user.uid, 'tags'), orderBy('createdAt', 'asc'));
@@ -83,7 +85,7 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
     return () => unsubscribe();
   }, [user]);
 
-  // --- LÓGICA DE MAPA ---
+  // --- LÓGICA DE MAPA (INTACTO) ---
   const searchLocationOnMap = async (text) => {
     if (!text || text.trim().length < 3) { setSuggestions([]); return; }
     try {
@@ -121,7 +123,7 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
     reverseGeocode(lat, lng); 
   };
 
-  // --- ETIQUETAS ---
+  // --- ETIQUETAS (INTACTO) ---
   const handleAddTag = async () => {
     const tagText = newTag.trim();
     if (!tagText || defaultTags.includes(tagText) || customTags.some(t => t.name === tagText)) return;
@@ -140,7 +142,7 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
     if (formData.type === customTags.find(t => t.id === tagId)?.name) setFormData(prev => ({ ...prev, type: 'Fiesta' }));
   };
 
-  // --- CONTACTOS ---
+  // --- CONTACTOS (INTACTO) ---
   const handleAddGuest = async () => {
     try {
       const permission = await Contacts.requestPermissions();
@@ -160,7 +162,7 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
   const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   const setEventType = (type) => setFormData(prev => ({ ...prev, type }));
 
-  // --- VALIDACIÓN PREVIA ---
+  // --- VALIDACIÓN PREVIA (INTACTO) ---
   const handlePreview = (e) => {
     e.preventDefault();
     if (!formData.name.trim()) return setError("Falta nombre");
@@ -171,15 +173,33 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
     setShowPreview(true);
   };
 
-  // 🆕 LÓGICA PUBLICAR / ACTUALIZAR
+  // 🆕 LÓGICA PUBLICAR MEJORADA (Mismo comportamiento, solo agrega subida de foto)
   const handlePublish = async () => {
     setLoading(true);
     try {
+      
+      // 1. Gestionar Fondo
+      let finalBackground = { type: 'gradient', value: backgroundConfig.value }; // Default
+      
+      if (backgroundConfig.type === 'image' && backgroundConfig.file) {
+        // Subir a Storage
+        const storageRef = ref(storage, `event_backgrounds/${user.uid}/${Date.now()}`);
+        await uploadBytes(storageRef, backgroundConfig.file);
+        const url = await getDownloadURL(storageRef);
+        finalBackground = { type: 'image', value: url };
+      }
+
+      // Preparar datos
+      const eventData = {
+        ...formData,
+        background: finalBackground // Guardamos el fondo en Firestore
+      };
+
       if (isEditing) {
          // --- MODO ACTUALIZAR ---
          const eventRef = doc(db, 'events', eventToEdit.id);
          await updateDoc(eventRef, {
-           ...formData,
+           ...eventData,
            updatedAt: serverTimestamp()
          });
          alert("Evento actualizado correctamente.");
@@ -187,7 +207,7 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
       } else {
          // --- MODO CREAR NUEVO ---
          const docRef = await addDoc(collection(db, 'events'), {
-           ...formData,
+           ...eventData,
            creatorId: user.uid,
            creatorName: user.displayName || 'Anónimo',
            creatorPhoto: user.photoURL || null,
@@ -321,97 +341,23 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
         </div>
 
         <button type="button" onClick={handlePreview} className="w-full bg-purple-600 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 flex justify-center items-center gap-2">
-          <Eye size={20} /> Vista Previa
+          <Eye size={20} /> Continuar a Diseño
         </button>
       </form>
 
-      {/* --- MODAL DE VISTA PREVIA --- */}
+      {/* 🆕 REEMPLAZAMOS EL MODAL ANTIGUO POR EL COMPONENTE NUEVO */}
       {showPreview && (
-        <div className="fixed inset-0 z-[2000] bg-gray-100 flex flex-col animate-slide-up">
-          
-          {/* Header Modal */}
-          <div className="bg-white p-4 shadow-sm flex items-center justify-between">
-             <button onClick={() => setShowPreview(false)} className="p-2 hover:bg-gray-100 rounded-full text-gray-600"><X size={24}/></button>
-             <h2 className="text-lg font-bold text-gray-800">Confirmar {isEditing ? 'Cambios' : 'Evento'}</h2>
-             <div className="w-10"></div> 
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-6">      
-            {/* TARJETA DE EVENTO (VISUAL) */}
-            <div className="relative overflow-hidden w-full min-h-[480px] bg-gradient-to-br from-orange-400 to-orange-600 rounded-[2.5rem] p-8 text-white shadow-xl flex flex-col justify-between border-2 border-white/10">
-              <PartyPopper className="absolute top-8 left-6 text-white opacity-20 rotate-[-15deg]" size={48} />
-              <Cake className="absolute bottom-24 right-[-10px] text-white opacity-20 rotate-[10deg]" size={80} />
-              <div className="absolute top-0 right-0 w-56 h-56 bg-white opacity-10 rounded-bl-full pointer-events-none blur-2xl"></div>
-
-              <div className="relative z-10 flex justify-center mt-2">
-                <span className="bg-black/20 px-5 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest backdrop-blur-md border border-white/10 shadow-sm">
-                  {formData.type}
-                </span>
-              </div>
-
-              <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center my-6 px-2">
-                <h3 className="text-4xl font-black leading-tight mb-4 drop-shadow-lg tracking-tighter break-words w-full">
-                  {formData.name}
-                </h3>
-              </div>
-              
-              <div className="relative z-10 flex flex-col gap-3 text-orange-50 text-base font-medium w-full mt-auto">
-                <div className="flex items-center justify-center gap-3 bg-black/10 px-6 py-4 rounded-3xl backdrop-blur-md border border-white/10 w-full shadow-inner">
-                  <Calendar size={20} className="shrink-0 text-white" />
-                  <span className="capitalize text-white">{formData.date}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3 w-full">
-                    <div className="flex items-center justify-center gap-2 bg-black/10 px-4 py-3.5 rounded-3xl backdrop-blur-md border border-white/10 shadow-inner">
-                        <Clock size={18} className="shrink-0 text-white" />
-                        <span className="text-white">{formData.time}</span>
-                    </div>
-                    <div className="flex items-center justify-center gap-2 bg-black/10 px-4 py-3.5 rounded-3xl backdrop-blur-md border border-white/10 shadow-inner overflow-hidden">
-                        <MapPin size={18} className="shrink-0 text-white" />
-                        <span className="truncate text-sm text-white">{formData.locationName || "Mapa"}</span>
-                    </div>
-                </div>
-              </div>
-            </div>
-
-            {/* SECCIÓN INVITADOS (Solo si NO estamos editando, para simplificar) */}
-            {!isEditing && (
-              <div className="mt-8 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-                 <h3 className="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2"><UserPlus size={20} className="text-purple-600"/> Invitar Amigos</h3>
-                 
-                 <button onClick={handleAddGuest} className="w-full py-3 border-2 border-dashed border-purple-200 text-purple-600 rounded-xl font-bold hover:bg-purple-50 transition flex justify-center items-center gap-2 mb-4">
-                   <Plus size={18}/> Seleccionar de Agenda
-                 </button>
-
-                 {guests.length > 0 ? (
-                   <div className="space-y-2">
-                     {guests.map((guest, idx) => (
-                       <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
-                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-purple-200 rounded-full flex items-center justify-center text-purple-700 font-bold text-xs">{guest.name.charAt(0)}</div>
-                            <span className="text-sm font-bold text-gray-700">{guest.name}</span>
-                         </div>
-                         <button onClick={() => removeGuest(idx)} className="text-gray-400 hover:text-red-500"><X size={16}/></button>
-                       </div>
-                     ))}
-                   </div>
-                 ) : (
-                   <p className="text-center text-gray-400 text-sm italic">Aún no has seleccionado invitados.</p>
-                 )}
-              </div>
-            )}
-          </div>
-
-          {/* Botón Final */}
-          <div className="p-4 bg-white border-t border-gray-100">
-            <button 
-              onClick={handlePublish}
-              disabled={loading}
-              className={`w-full text-white font-bold py-4 rounded-xl shadow-xl active:scale-95 flex justify-center items-center gap-2 disabled:opacity-70 ${isEditing ? 'bg-blue-600' : 'bg-green-600'}`}
-            >
-              {loading ? 'Guardando...' : (isEditing ? <><Save size={20} /> Guardar Cambios</> : <><Send size={20} /> Publicar y Enviar</>)}
-            </button>
-          </div>
-        </div>
+        <EventPreviewModal 
+          formData={formData}
+          guests={guests}
+          isEditing={isEditing}
+          loading={loading}
+          onClose={() => setShowPreview(false)}
+          onPublish={handlePublish}
+          onAddGuest={handleAddGuest}
+          onRemoveGuest={removeGuest}
+          onBackgroundChange={setBackgroundConfig} 
+        />
       )}
 
     </div>
