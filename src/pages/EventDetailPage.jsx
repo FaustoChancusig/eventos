@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { deleteDoc, doc, updateDoc, collection, query, where, getDocs, addDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { db } from '../config/firebase'; 
-import { Calendar, MapPin, ArrowLeft, Trash2, Users, Send, Check, HelpCircle, X, Crown, AlignLeft, Clock } from 'lucide-react';
+import { Calendar, MapPin, ArrowLeft, Trash2, Users, Send, Check, HelpCircle, X, Crown, AlignLeft, Clock, Edit } from 'lucide-react';
 
-export default function EventDetailPage({ event, user, onBack }) {
+export default function EventDetailPage({ event, user, onBack, onEdit }) {
   // 'invitingIndex' controla el estado de carga de botones individuales
   const [invitingIndex, setInvitingIndex] = useState(null); 
   
@@ -13,7 +13,6 @@ export default function EventDetailPage({ event, user, onBack }) {
   // Buscar mi estado actual en la lista de asistentes
   const myAttendance = useMemo(() => {
     if (!event.attendees) return null;
-    // Buscamos por UID o por coincidencia de teléfono limpio
     const myRawPhone = (user.phoneNumber || '').replace(/[^0-9]/g, '');
     return event.attendees.find(a => {
         if (a.uid === user.uid) return true;
@@ -36,15 +35,13 @@ export default function EventDetailPage({ event, user, onBack }) {
     }
   };
 
-  // --- LÓGICA: CAMBIAR MI ESTADO (SOLO INVITADO) ---
-  // (Incluye el arreglo de duplicados por teléfono)
+  // --- LÓGICA: CAMBIAR MI ESTADO ---
   const handleChangeStatus = async (newStatus) => {
     try {
       const eventRef = doc(db, 'events', event.id);
       const currentAttendees = event.attendees || [];
       const myRawPhone = (user.phoneNumber || '').replace(/[^0-9]/g, ''); 
       
-      // 1. Filtramos para quitar cualquier registro previo mío (por UID o teléfono)
       const otherAttendees = currentAttendees.filter(a => {
         const guestPhone = (a.phone || '').replace(/[^0-9]/g, '');
         const isMeByUid = a.uid === user.uid;
@@ -52,7 +49,6 @@ export default function EventDetailPage({ event, user, onBack }) {
         return !isMeByUid && !isMeByPhone;
       });
 
-      // 2. Creamos mi nuevo registro
       const myNewEntry = {
         uid: user.uid,
         name: user.displayName || 'Usuario',
@@ -61,7 +57,6 @@ export default function EventDetailPage({ event, user, onBack }) {
         updatedAt: new Date().toISOString()
       };
 
-      // 3. Guardamos la lista actualizada
       let updates = {
         attendees: [...otherAttendees, myNewEntry]
       };
@@ -71,8 +66,6 @@ export default function EventDetailPage({ event, user, onBack }) {
       }
 
       await updateDoc(eventRef, updates);
-      // Feedback opcional
-      // alert(`Estado actualizado.`);
 
     } catch (error) {
       console.error("Error actualizando status:", error);
@@ -117,7 +110,6 @@ export default function EventDetailPage({ event, user, onBack }) {
     }
   };
 
-  // Definir colores según el rol (para el fondo de los widgets)
   const themeBgColor = isCreator ? 'bg-orange-50' : 'bg-purple-50';
   const themeAccentColor = isCreator ? 'text-orange-600' : 'text-purple-600';
   const themeBorderColor = isCreator ? 'border-orange-100' : 'border-purple-100';
@@ -131,7 +123,17 @@ export default function EventDetailPage({ event, user, onBack }) {
           <button onClick={onBack} className="bg-black/20 backdrop-blur-md p-2 rounded-full text-white hover:bg-black/30 transition active:scale-95">
             <ArrowLeft size={24} />
           </button>
+          
           <div className="flex gap-2">
+             {/* 🆕 BOTÓN EDITAR (HEADER) */}
+             {isCreator && (
+                <button 
+                  onClick={() => onEdit(event)}
+                  className="bg-white/20 backdrop-blur-md p-2 rounded-full text-white hover:bg-white/30 transition active:scale-95 border border-white/10"
+                >
+                  <Edit size={20} />
+                </button>
+             )}
              {isCreator && (
                 <div className="bg-black/20 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-bold flex items-center gap-1">
                   <Crown size={12} /> Admin
@@ -149,89 +151,75 @@ export default function EventDetailPage({ event, user, onBack }) {
             Organizado por {event.creatorName}
           </p>
         </div>
-        {/* Decoración de fondo */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-bl-full blur-3xl pointer-events-none z-0"></div>
       </div>
 
-      {/* --- CONTENIDO PRINCIPAL (Estilo Widgets) --- */}
+      {/* --- CONTENIDO --- */}
       <div className="flex-1 -mt-8 bg-gray-100 rounded-t-[2.5rem] relative z-30 overflow-y-auto overflow-x-hidden pb-8 shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
         <div className="p-6 space-y-6">
 
-          {/* 1. SECCIÓN INVITADOS (Burbujas estilo Instagram) */}
+          {/* 1. SECCIÓN INVITADOS */}
           <div className="mb-2">
-             <div className="flex items-center justify-between mb-3 px-1">
-               <h3 className={`font-bold text-sm uppercase tracking-wider ${themeAccentColor}`}>Invitados</h3>
-               <span className={`${themeBgColor} ${themeAccentColor} px-2.5 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 border ${themeBorderColor}`}>
-                 <Users size={12} /> {event.attendees?.length || 0}
-               </span>
-             </div>
-             
-             {/* Contenedor de scroll horizontal */}
-             <div className="flex gap-4 overflow-x-auto pb-2 px-1 scroll-smooth snap-x snap-mandatory -mx-1 scrollbar-hide">
-               {/* Botón para añadir (solo creador) - Opcional, por ahora lo quito para limpiar la vista
-               {isCreator && (
-                 <button className="flex flex-col items-center shrink-0 snap-start">
-                   <div className={`w-16 h-16 rounded-full ${themeBgColor} border-2 border-dashed ${themeBorderColor} flex items-center justify-center text-2xl text-gray-400 shadow-sm active:scale-95 transition`}>+</div>
-                   <span className="text-xs text-gray-500 mt-2 font-medium">Invitar</span>
-                 </button>
-               )} */}
+              <div className="flex items-center justify-between mb-3 px-1">
+                <h3 className={`font-bold text-sm uppercase tracking-wider ${themeAccentColor}`}>Invitados</h3>
+                <span className={`${themeBgColor} ${themeAccentColor} px-2.5 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 border ${themeBorderColor}`}>
+                  <Users size={12} /> {event.attendees?.length || 0}
+                </span>
+              </div>
+              
+              <div className="flex gap-4 overflow-x-auto pb-2 px-1 scroll-smooth snap-x snap-mandatory -mx-1 scrollbar-hide">
+                {event.attendees && event.attendees.length > 0 ? (
+                  event.attendees.map((guest, index) => {
+                    const isMe = user?.uid === guest.uid;
+                    const needsInvitation = isCreator && guest.status !== 'confirmed';
 
-               {event.attendees && event.attendees.length > 0 ? (
-                 event.attendees.map((guest, index) => {
-                   const isMe = user?.uid === guest.uid;
-                   // Lógica para el botón de invitar del creador
-                   const needsInvitation = isCreator && guest.status !== 'confirmed';
+                    return (
+                     <div key={index} className="flex flex-col items-center shrink-0 snap-start relative group">
+                       <div className={`relative w-16 h-16 p-0.5 rounded-full border-2 ${
+                           guest.status === 'confirmed' ? 'border-green-500' : 
+                           guest.status === 'declined' ? 'border-red-300' :
+                           themeBorderColor
+                         } shadow-sm transition group-hover:shadow-md`}>
+                         <div className="w-full h-full rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold text-xl overflow-hidden">
+                            {guest.name.charAt(0)}
+                         </div>
+                         
+                         <div className={`absolute bottom-0 right-0 w-6 h-6 rounded-full border-2 border-white flex items-center justify-center text-white text-xs
+                           ${guest.status === 'confirmed' ? 'bg-green-500' : 
+                             guest.status === 'declined' ? 'bg-red-400' :
+                             'bg-orange-400'}`}>
+                           {guest.status === 'confirmed' && <Check size={12} strokeWidth={3} />}
+                           {guest.status === 'declined' && <X size={12} strokeWidth={3} />}
+                           {guest.status === 'maybe' && <HelpCircle size={12} strokeWidth={3} />}
+                           {!guest.status && <span className="text-[10px] font-bold">?</span>}
+                         </div>
 
-                   return (
-                    <div key={index} className="flex flex-col items-center shrink-0 snap-start relative group">
-                      <div className={`relative w-16 h-16 p-0.5 rounded-full border-2 ${
-                          guest.status === 'confirmed' ? 'border-green-500' : 
-                          guest.status === 'declined' ? 'border-red-300' :
-                          themeBorderColor
-                        } shadow-sm transition group-hover:shadow-md`}>
-                        <div className="w-full h-full rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold text-xl overflow-hidden">
-                           {/* Aquí iría la foto si la tuvieras */}
-                           {guest.name.charAt(0)}
-                        </div>
-                        
-                        {/* Badge de estado (Check/X/Question) */}
-                        <div className={`absolute bottom-0 right-0 w-6 h-6 rounded-full border-2 border-white flex items-center justify-center text-white text-xs
-                          ${guest.status === 'confirmed' ? 'bg-green-500' : 
-                            guest.status === 'declined' ? 'bg-red-400' :
-                            'bg-orange-400'}`}>
-                          {guest.status === 'confirmed' && <Check size={12} strokeWidth={3} />}
-                          {guest.status === 'declined' && <X size={12} strokeWidth={3} />}
-                          {guest.status === 'maybe' && <HelpCircle size={12} strokeWidth={3} />}
-                          {!guest.status && <span className="text-[10px] font-bold">?</span>}
-                        </div>
-
-                        {/* Botón flotante de enviar invitación (Solo Creador) */}
-                        {needsInvitation && (
-                           <button 
-                             onClick={(e) => { e.stopPropagation(); handleInvite(guest, index); }}
-                             disabled={invitingIndex === index}
-                             className="absolute -top-1 -right-1 w-7 h-7 bg-white text-orange-500 rounded-full shadow-md flex items-center justify-center hover:scale-110 active:scale-95 transition z-10 border border-orange-100"
-                           >
-                             {invitingIndex === index ? <span className="animate-spin h-3 w-3 border-2 border-orange-500 rounded-full border-t-transparent"></span> : <Send size={14} />}
-                           </button>
-                        )}
-                      </div>
-                      <span className={`text-xs mt-2 font-medium truncate max-w-[70px] ${isMe ? themeAccentColor + ' font-bold' : 'text-gray-600'}`}>
-                        {isMe ? 'Tú' : guest.name.split(' ')[0]}
-                      </span>
-                    </div>
-                   );
-                 })
-               ) : (
-                 <p className="text-sm text-gray-400 italic py-4">Aún no hay invitados.</p>
-               )}
-             </div>
+                         {needsInvitation && (
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleInvite(guest, index); }}
+                              disabled={invitingIndex === index}
+                              className="absolute -top-1 -right-1 w-7 h-7 bg-white text-orange-500 rounded-full shadow-md flex items-center justify-center hover:scale-110 active:scale-95 transition z-10 border border-orange-100"
+                            >
+                              {invitingIndex === index ? <span className="animate-spin h-3 w-3 border-2 border-orange-500 rounded-full border-t-transparent"></span> : <Send size={14} />}
+                            </button>
+                         )}
+                       </div>
+                       <span className={`text-xs mt-2 font-medium truncate max-w-[70px] ${isMe ? themeAccentColor + ' font-bold' : 'text-gray-600'}`}>
+                         {isMe ? 'Tú' : guest.name.split(' ')[0]}
+                       </span>
+                     </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-sm text-gray-400 italic py-4">Aún no hay invitados.</p>
+                )}
+              </div>
           </div>
 
-          {/* --- WIDGETS DE INFORMACIÓN --- */}
+          {/* WIDGETS INFORMACIÓN */}
           <div className="grid grid-cols-1 gap-4">
             
-            {/* Widget Doble: Fecha y Hora */}
+            {/* Fecha y Hora */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white p-5 rounded-[2rem] shadow-sm flex items-start gap-4 border border-gray-50">
                 <div className={`p-3 rounded-2xl ${themeBgColor} ${themeAccentColor}`}>
@@ -256,9 +244,8 @@ export default function EventDetailPage({ event, user, onBack }) {
               </div>
             </div>
 
-             {/* Widget Ubicación (Mapa placeholder) */}
+             {/* Ubicación */}
             <div className="bg-white p-1 rounded-[2.5rem] shadow-sm border border-gray-50 overflow-hidden relative group cursor-pointer">
-              {/* Placeholder visual de mapa */}
               <div className="h-40 bg-blue-50 w-full rounded-[2rem] relative overflow-hidden opacity-80">
                 <div className="absolute inset-0 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px] opacity-20"></div>
                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-md p-4 rounded-2xl shadow-sm flex items-center gap-3 border border-white/50 z-10">
@@ -271,7 +258,7 @@ export default function EventDetailPage({ event, user, onBack }) {
               <div className="absolute inset-0 bg-black/0 transition group-hover:bg-black/5 rounded-[2.5rem]"></div>
             </div>
 
-            {/* 2. PANEL DE ESTADO (SOLO INVITADO) - Estilo Widget */}
+            {/* PANEL ESTADO (INVITADO) */}
             {!isCreator && (
               <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border-2 border-purple-100 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-bl-full opacity-50 pointer-events-none"></div>
@@ -311,7 +298,7 @@ export default function EventDetailPage({ event, user, onBack }) {
               </div>
             )}
 
-            {/* Widget Descripción */}
+            {/* Descripción */}
             {event.description && (
               <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-50 flex items-start gap-4">
                 <div className={`p-3 rounded-2xl ${themeBgColor} ${themeAccentColor} shrink-0`}>
@@ -326,11 +313,16 @@ export default function EventDetailPage({ event, user, onBack }) {
               </div>
             )}
 
-            {/* Widget Eliminar (SOLO CREADOR) */}
+            {/* 🆕 BOTONES DE GESTIÓN (SOLO CREADOR) */}
             {isCreator && (
-              <button onClick={handleDelete} className="bg-red-50 p-6 rounded-[2.5rem] shadow-sm border border-red-100 flex items-center justify-center gap-3 text-red-600 font-bold active:scale-95 transition hover:bg-red-100 mt-4">
-                <Trash2 size={24} /> Eliminar Evento
-              </button>
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                <button onClick={() => onEdit(event)} className="bg-orange-50 p-4 rounded-[2.5rem] shadow-sm border border-orange-100 flex items-center justify-center gap-3 text-orange-600 font-bold active:scale-95 transition hover:bg-orange-100">
+                   <Edit size={22} /> Editar
+                </button>
+                <button onClick={handleDelete} className="bg-red-50 p-4 rounded-[2.5rem] shadow-sm border border-red-100 flex items-center justify-center gap-3 text-red-600 font-bold active:scale-95 transition hover:bg-red-100">
+                  <Trash2 size={22} /> Eliminar
+                </button>
+              </div>
             )}
 
           </div>

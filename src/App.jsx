@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'; // 👈 Se añadió useRef
+import React, { useState, useEffect, useRef } from 'react';
 import { onAuthStateChanged } from 'firebase/auth'; 
 import { auth } from './config/firebase'; 
 import { App as CapacitorApp } from '@capacitor/app';
@@ -8,48 +8,50 @@ import AuthPage from './pages/AuthPage';
 import HomePage from './pages/HomePage';
 import CreateEventPage from './pages/CreateEventPage';
 import EventDetailPage from './pages/EventDetailPage';
-import NotificationsPage from './pages/NotificationsPage'; // 
+import NotificationsPage from './pages/NotificationsPage';
 import ProfilePage from './pages/ProfilePage';
-
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [view, setView] = useState('loading'); 
   const [selectedEvent, setSelectedEvent] = useState(null); 
+  
+  // 🆕 NUEVO: Estado para saber si estamos editando un evento existente
+  const [eventToEdit, setEventToEdit] = useState(null);
 
   // Ref para controlar el doble toque para salir
   const lastBackPressTime = useRef(0);
-  const [showExitToast, setShowExitToast] = useState(false); // 👈 Se eliminó la 's' extra
+  const [showExitToast, setShowExitToast] = useState(false);
 
-  // --- 1. MANEJO DEL BOTÓN ATRÁS (ANDROID) - Lógica Doble Toque ---
+  // --- MANEJO DEL BOTÓN ATRÁS (ANDROID) ---
   useEffect(() => {
     const backButtonListener = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
       
-      // CASO A: Estamos en una sub-página -> Volvemos al Home
+      // Si no estamos en Home/Login/Loading, volvemos atrás
       if (view !== 'home' && view !== 'login' && view !== 'loading') {
+        // Si estábamos en 'create' (editando o creando), limpiamos el estado de edición
+        if (view === 'create') {
+          setEventToEdit(null);
+        }
         setView('home');
       } 
-      // CASO B: Estamos en Home o Login -> Lógica de doble toque para salir
+      // Si estamos en Home, lógica de doble toque para salir
       else {
         const now = new Date().getTime();
-        // Si presionó hace menos de 2 segundos, SALIMOS
         if (now - lastBackPressTime.current < 2000) {
           CapacitorApp.exitApp();
         } else {
-          // Si es la primera vez, mostramos el mensaje y guardamos el tiempo
           lastBackPressTime.current = now;
           setShowExitToast(true);
-          // Ocultar mensaje después de 2 segundos
           setTimeout(() => setShowExitToast(false), 2000); 
         }
       }
     });
 
     return () => {
-      backButtonListener.remove(); // Limpiamos el listener al desmontar
+      backButtonListener.remove();
     };
-  }, [view]); // Se actualiza cada vez que cambia la vista
-
+  }, [view]);
 
   useEffect(() => {
     if (!auth) {
@@ -67,24 +69,20 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Pantalla de error si falta configuración
   if (view === 'error_config') {
     return <div className="p-10 text-center">Error: Falta configuración de Firebase.</div>;
   }
 
-  // Pantalla de Carga
   if (view === 'loading') {
     return <div className="h-screen flex items-center justify-center">Cargando...</div>;
   }
   
-  // Si no hay usuario, mostramos Login
   if (!user) {
     return (
       <>
         <AuthPage />
-        {/* Aseguramos que el toast también se pueda mostrar en el Login */}
         {showExitToast && (
-          <div className="fixed bottom-12 left-1/2 transform -translate-x-1/2 bg-black/80 text-white px-6 py-2 rounded-full text-sm shadow-lg z-[9999] animate-fade-in pointer-events-none">
+          <div className="fixed bottom-12 left-1/2 transform -translate-x-1/2 bg-black/80 text-white px-6 py-2 rounded-full text-sm shadow-lg z-[9999] pointer-events-none">
             Presiona otra vez para salir
           </div>
         )}
@@ -99,7 +97,11 @@ export default function App() {
         return (
           <HomePage 
             user={user} 
-            onNavigate={setView} 
+            onNavigate={(target) => {
+                // Al ir a crear desde el home, nos aseguramos de que sea uno nuevo
+                if (target === 'create') setEventToEdit(null);
+                setView(target);
+            }} 
             onSelectEvent={(evt) => { setSelectedEvent(evt); setView('detail'); }} 
           />
         );
@@ -108,7 +110,8 @@ export default function App() {
         return (
           <CreateEventPage 
             user={user} 
-            onBack={() => setView('home')} 
+            onBack={() => { setEventToEdit(null); setView('home'); }} 
+            eventToEdit={eventToEdit} // 🆕 Pasamos el evento a editar (si existe)
           />
         );
 
@@ -118,9 +121,12 @@ export default function App() {
             event={selectedEvent} 
             user={user}
             onBack={() => setView('home')} 
+            onEdit={(evt) => { // 🆕 Callback cuando el usuario pulsa Editar
+                setEventToEdit(evt);
+                setView('create');
+            }}
           />
         ) : (
-          // Si no hay evento seleccionado, volvemos al home para evitar errores
           (() => { setView('home'); return null; })()
         );
 
@@ -147,10 +153,8 @@ export default function App() {
   return (
     <>
       {renderedView}
-      
-      {/* TOAST PERSONALIZADO (Mensaje flotante abajo) */}
       {showExitToast && (
-        <div className="fixed bottom-12 left-1/2 transform -translate-x-1/2 bg-black/80 text-white px-6 py-2 rounded-full text-sm shadow-lg z-[9999] animate-fade-in pointer-events-none">
+        <div className="fixed bottom-12 left-1/2 transform -translate-x-1/2 bg-black/80 text-white px-6 py-2 rounded-full text-sm shadow-lg z-[9999] pointer-events-none animate-fade-in">
           Presiona otra vez para salir
         </div>
       )}

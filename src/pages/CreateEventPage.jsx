@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, doc, getDocs, where } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, serverTimestamp, query, orderBy, onSnapshot, deleteDoc, getDocs, where } from 'firebase/firestore';
 import { db } from '../config/firebase'; 
 import { Contacts } from '@capacitor-community/contacts'; 
 import { 
@@ -10,10 +10,9 @@ import L from 'leaflet';
 import { 
   MapPin, Calendar, Clock, AlignLeft, ArrowLeft, 
   Type, AlertCircle, UserPlus, X, Plus, Check, Trash2, Eye, Send, 
-  PartyPopper, Gift, Cake 
+  PartyPopper, Gift, Cake, Save 
 } from 'lucide-react';
 
-// --- Iconos Leaflet ---
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
@@ -37,14 +36,14 @@ function MapMover({ lat, lng }) {
   return null;
 }
 
-export default function CreateEventPage({ user, onBack }) {
+export default function CreateEventPage({ user, onBack, eventToEdit }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
-  // Estados
-  const [guests, setGuests] = useState([]);
-  const [showPreview, setShowPreview] = useState(false); // Controla el modal de vista previa
+  const isEditing = !!eventToEdit; // 🆕 Flag para saber modo
 
+  const [guests, setGuests] = useState([]);
+  const [showPreview, setShowPreview] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
 
@@ -56,6 +55,23 @@ export default function CreateEventPage({ user, onBack }) {
   const [formData, setFormData] = useState({
     name: '', type: 'Fiesta', date: '', time: '', description: '', locationName: '', lat: null, lng: null
   });
+
+  // 🆕 EFECTO: CARGAR DATOS SI ESTAMOS EDITANDO
+  useEffect(() => {
+    if (eventToEdit) {
+      setFormData({
+        name: eventToEdit.name || '',
+        type: eventToEdit.type || 'Fiesta',
+        date: eventToEdit.date || '',
+        time: eventToEdit.time || '',
+        description: eventToEdit.description || '',
+        locationName: eventToEdit.locationName || '',
+        lat: eventToEdit.lat || null,
+        lng: eventToEdit.lng || null
+      });
+      // Nota: No cargamos invitados en edición para simplificar y no romper estados
+    }
+  }, [eventToEdit]);
 
   // Cargar Etiquetas
   useEffect(() => {
@@ -141,77 +157,72 @@ export default function CreateEventPage({ user, onBack }) {
   };
 
   const removeGuest = (index) => setGuests(guests.filter((_, i) => i !== index));
-
   const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   const setEventType = (type) => setFormData(prev => ({ ...prev, type }));
 
-  // --- VALIDACIÓN PREVIA A VISTA PREVIA ---
+  // --- VALIDACIÓN PREVIA ---
   const handlePreview = (e) => {
     e.preventDefault();
     if (!formData.name.trim()) return setError("Falta nombre");
     if (!formData.date) return setError("Falta fecha");
     if (!formData.time) return setError("Falta hora");
-    if (!formData.lat) return setError("Falta ubicación");
     
     setError(null);
     setShowPreview(true);
   };
 
-  // --- PUBLICAR Y ENVIAR INVITACIONES AUTOMÁTICAMENTE ---
+  // 🆕 LÓGICA PUBLICAR / ACTUALIZAR
   const handlePublish = async () => {
     setLoading(true);
     try {
-      // 1. Guardar el evento
-      const docRef = await addDoc(collection(db, 'events'), {
-        ...formData,
-        creatorId: user.uid,
-        creatorName: user.displayName || 'Anónimo',
-        creatorPhoto: user.photoURL || null,
-        attendees: guests, // Se guarda la lista inicial
-        createdAt: serverTimestamp()
-      });
+      if (isEditing) {
+         // --- MODO ACTUALIZAR ---
+         const eventRef = doc(db, 'events', eventToEdit.id);
+         await updateDoc(eventRef, {
+           ...formData,
+           updatedAt: serverTimestamp()
+         });
+         alert("Evento actualizado correctamente.");
 
-      const eventId = docRef.id;
+      } else {
+         // --- MODO CREAR NUEVO ---
+         const docRef = await addDoc(collection(db, 'events'), {
+           ...formData,
+           creatorId: user.uid,
+           creatorName: user.displayName || 'Anónimo',
+           creatorPhoto: user.photoURL || null,
+           attendees: guests, 
+           createdAt: serverTimestamp()
+         });
+         const eventId = docRef.id;
 
-      // 2. Procesar Invitaciones Automáticas
-      // Recorremos la lista de invitados seleccionados
-      const promises = guests.map(async (guest) => {
-        const cleanPhone = guest.phone.replace(/[^0-9]/g, '');
-        
-        // Buscamos variantes del número para encontrar usuario
-        let searchPhones = [cleanPhone];
-        if (cleanPhone.startsWith('593')) searchPhones.push('0' + cleanPhone.substring(3));
-        if (cleanPhone.startsWith('09')) searchPhones.push('593' + cleanPhone.substring(1));
+         const promises = guests.map(async (guest) => {
+           const cleanPhone = guest.phone.replace(/[^0-9]/g, '');
+           let searchPhones = [cleanPhone];
+           if (cleanPhone.startsWith('593')) searchPhones.push('0' + cleanPhone.substring(3));
+           if (cleanPhone.startsWith('09')) searchPhones.push('593' + cleanPhone.substring(1));
 
-        const q = query(collection(db, 'users'), where('phone', 'in', searchPhones));
-        const querySnapshot = await getDocs(q);
+           const q = query(collection(db, 'users'), where('phone', 'in', searchPhones));
+           const querySnapshot = await getDocs(q);
 
-        if (!querySnapshot.empty) {
-          // TIENE APP: Enviamos notificación
-          const targetUser = querySnapshot.docs[0].data();
-          await addDoc(collection(db, 'users', targetUser.uid, 'notifications'), {
-            type: 'invitation',
-            eventId: eventId,
-            eventName: formData.name,
-            fromName: user.displayName || 'Alguien',
-            fromPhoto: user.photoURL,
-            status: 'pending',
-            message: `¡Te he invitado a ${formData.name}!`,
-            createdAt: serverTimestamp()
-          });
-        } else {
-           // NO TIENE APP: No podemos abrir WhatsApp automáticamente en bucle sin interacción del usuario
-           // (Los navegadores bloquean popups múltiples).
-           // Lo ideal aquí es avisar al usuario al final "Se enviaron X notificaciones, recuerda compartir por WhatsApp a los demás".
-        }
-      });
-
-      await Promise.all(promises);
+           if (!querySnapshot.empty) {
+             const targetUser = querySnapshot.docs[0].data();
+             await addDoc(collection(db, 'users', targetUser.uid, 'notifications'), {
+               type: 'invitation',
+               eventId: eventId,
+               eventName: formData.name,
+               fromName: user.displayName || 'Alguien',
+               fromPhoto: user.photoURL,
+               status: 'pending',
+               message: `¡Te he invitado a ${formData.name}!`,
+               createdAt: serverTimestamp()
+             });
+           }
+         });
+         await Promise.all(promises);
+      }
       
-      // Alerta final si había invitados sin app
-      // (Opcional: Podrías mostrar un resumen)
-      
-      onBack(); // Volver al Home
+      onBack(); 
     } catch (error) {
       console.error(error);
       setError("Error al guardar.");
@@ -225,7 +236,7 @@ export default function CreateEventPage({ user, onBack }) {
       {/* Header */}
       <div className="bg-white p-4 shadow-sm flex items-center sticky top-0 z-[1000] border-b border-gray-100">
         <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full transition text-gray-600"><ArrowLeft size={24} /></button>
-        <h2 className="ml-4 text-lg font-bold text-gray-800">Nuevo Evento</h2>
+        <h2 className="ml-4 text-lg font-bold text-gray-800">{isEditing ? 'Editar Evento' : 'Nuevo Evento'}</h2>
       </div>
 
       <form className="flex-1 overflow-y-auto p-6 space-y-6 pb-24">
@@ -294,7 +305,7 @@ export default function CreateEventPage({ user, onBack }) {
             )}
           </div>
           <div className="h-64 rounded-b-2xl overflow-hidden shadow-inner border border-gray-200 relative z-[1]">
-            <MapContainer center={[-0.1807, -78.4678]} zoom={13} style={{ height: '100%', width: '100%' }}>
+            <MapContainer center={formData.lat ? [formData.lat, formData.lng] : [-0.1807, -78.4678]} zoom={13} style={{ height: '100%', width: '100%' }}>
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
               <MapMover lat={formData.lat} lng={formData.lng} />
               <LocationSelector onLocationSelected={setLocationFromMap} position={formData.lat ? [formData.lat, formData.lng] : null} />
@@ -309,7 +320,6 @@ export default function CreateEventPage({ user, onBack }) {
           <textarea name="description" value={formData.description} onChange={handleChange} rows="3" placeholder="Notas extra..." className="w-full outline-none text-gray-700 text-sm resize-none placeholder-gray-400"></textarea>
         </div>
 
-        {/* Botón Vista Previa (Reemplaza al Submit directo) */}
         <button type="button" onClick={handlePreview} className="w-full bg-purple-600 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 flex justify-center items-center gap-2">
           <Eye size={20} /> Vista Previa
         </button>
@@ -322,12 +332,12 @@ export default function CreateEventPage({ user, onBack }) {
           {/* Header Modal */}
           <div className="bg-white p-4 shadow-sm flex items-center justify-between">
              <button onClick={() => setShowPreview(false)} className="p-2 hover:bg-gray-100 rounded-full text-gray-600"><X size={24}/></button>
-             <h2 className="text-lg font-bold text-gray-800">Vista Previa</h2>
-             <div className="w-10"></div> {/* Espaciador */}
+             <h2 className="text-lg font-bold text-gray-800">Confirmar {isEditing ? 'Cambios' : 'Evento'}</h2>
+             <div className="w-10"></div> 
           </div>
 
           <div className="flex-1 overflow-y-auto p-6">      
-            {/* TARJETA DE EVENTO (Mismo estilo que Home) */}
+            {/* TARJETA DE EVENTO (VISUAL) */}
             <div className="relative overflow-hidden w-full min-h-[480px] bg-gradient-to-br from-orange-400 to-orange-600 rounded-[2.5rem] p-8 text-white shadow-xl flex flex-col justify-between border-2 border-white/10">
               <PartyPopper className="absolute top-8 left-6 text-white opacity-20 rotate-[-15deg]" size={48} />
               <Cake className="absolute bottom-24 right-[-10px] text-white opacity-20 rotate-[10deg]" size={80} />
@@ -363,40 +373,42 @@ export default function CreateEventPage({ user, onBack }) {
               </div>
             </div>
 
-            {/* SECCIÓN INVITADOS (Aquí se agregan antes de publicar) */}
-            <div className="mt-8 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-               <h3 className="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2"><UserPlus size={20} className="text-purple-600"/> Invitar Amigos</h3>
-               
-               <button onClick={handleAddGuest} className="w-full py-3 border-2 border-dashed border-purple-200 text-purple-600 rounded-xl font-bold hover:bg-purple-50 transition flex justify-center items-center gap-2 mb-4">
-                 <Plus size={18}/> Seleccionar de Agenda
-               </button>
+            {/* SECCIÓN INVITADOS (Solo si NO estamos editando, para simplificar) */}
+            {!isEditing && (
+              <div className="mt-8 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                 <h3 className="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2"><UserPlus size={20} className="text-purple-600"/> Invitar Amigos</h3>
+                 
+                 <button onClick={handleAddGuest} className="w-full py-3 border-2 border-dashed border-purple-200 text-purple-600 rounded-xl font-bold hover:bg-purple-50 transition flex justify-center items-center gap-2 mb-4">
+                   <Plus size={18}/> Seleccionar de Agenda
+                 </button>
 
-               {guests.length > 0 ? (
-                 <div className="space-y-2">
-                   {guests.map((guest, idx) => (
-                     <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
-                       <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-purple-200 rounded-full flex items-center justify-center text-purple-700 font-bold text-xs">{guest.name.charAt(0)}</div>
-                          <span className="text-sm font-bold text-gray-700">{guest.name}</span>
+                 {guests.length > 0 ? (
+                   <div className="space-y-2">
+                     {guests.map((guest, idx) => (
+                       <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                         <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-purple-200 rounded-full flex items-center justify-center text-purple-700 font-bold text-xs">{guest.name.charAt(0)}</div>
+                            <span className="text-sm font-bold text-gray-700">{guest.name}</span>
+                         </div>
+                         <button onClick={() => removeGuest(idx)} className="text-gray-400 hover:text-red-500"><X size={16}/></button>
                        </div>
-                       <button onClick={() => removeGuest(idx)} className="text-gray-400 hover:text-red-500"><X size={16}/></button>
-                     </div>
-                   ))}
-                 </div>
-               ) : (
-                 <p className="text-center text-gray-400 text-sm italic">Aún no has seleccionado invitados.</p>
-               )}
-            </div>
+                     ))}
+                   </div>
+                 ) : (
+                   <p className="text-center text-gray-400 text-sm italic">Aún no has seleccionado invitados.</p>
+                 )}
+              </div>
+            )}
           </div>
 
-          {/* Botón Final de Publicar */}
+          {/* Botón Final */}
           <div className="p-4 bg-white border-t border-gray-100">
             <button 
               onClick={handlePublish}
               disabled={loading}
-              className="w-full bg-green-600 text-white font-bold py-4 rounded-xl shadow-xl active:scale-95 flex justify-center items-center gap-2 disabled:opacity-70"
+              className={`w-full text-white font-bold py-4 rounded-xl shadow-xl active:scale-95 flex justify-center items-center gap-2 disabled:opacity-70 ${isEditing ? 'bg-blue-600' : 'bg-green-600'}`}
             >
-              {loading ? 'Publicando...' : <><Send size={20} /> Publicar y Enviar</>}
+              {loading ? 'Guardando...' : (isEditing ? <><Save size={20} /> Guardar Cambios</> : <><Send size={20} /> Publicar y Enviar</>)}
             </button>
           </div>
         </div>
