@@ -3,7 +3,7 @@ import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, delet
 import { db } from '../config/firebase'; 
 import { 
   Search, Bell, Calendar, MapPin, Clock, User, 
-  ChevronDown, Filter, PartyPopper, Gift, Cake, X, Check, Crown
+  ChevronDown, Filter, PartyPopper, X, Check, Crown
 } from 'lucide-react';
 
 export default function HomePage({ user, onNavigate, onSelectEvent }) {
@@ -18,16 +18,15 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [hasNewNotifs, setHasNewNotifs] = useState(false);
 
-  // 1. Cargar Eventos (Propios + Invitaciones)
+  // 1. Cargar Eventos
   useEffect(() => {
     if (!user) return;
 
-    // CAMBIO IMPORTANTE: Usamos 'or' para traer eventos creados POR MÍ o donde YO esté invitado
     const q = query(
       collection(db, 'events'), 
       or(
         where("creatorId", "==", user.uid),
-        where("guestIds", "array-contains", user.uid) // Este campo lo crearemos en el siguiente paso
+        where("guestIds", "array-contains", user.uid)
       )
     );
     
@@ -35,17 +34,11 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
       const eventsData = snapshot.docs.map(doc => ({ 
         id: doc.id, 
         ...doc.data(),
-        // Calculamos si soy el dueño para usarlo en la UI
         isMyEvent: doc.data().creatorId === user.uid 
       }));
       
-      // Ordenar por fecha
       eventsData.sort((a, b) => new Date(a.date) - new Date(b.date));
       setEvents(eventsData);
-    }, (error) => {
-      console.error("Error cargando eventos:", error);
-      // Si ves un error de "indexes" en la consola, es porque Firebase pide crear un índice para esta consulta compuesta.
-      // Simplemente abre el link que te saldrá en la consola del navegador.
     });
 
     return () => unsubscribe();
@@ -65,9 +58,6 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
     return () => unsubscribe();
   }, [user]);
 
-  // Acciones de Notificación (Simplificado aquí, la lógica completa irá en NotificationsPage o se maneja aquí si prefieres un acceso rápido)
-  // NOTA: Para mantener la consistencia con tu nueva lógica de 3 estados, te recomiendo que al dar clic en una notificación
-  // en este popup, simplemente redirija a la página de notificaciones completa.
   const handleQuickViewNotif = () => {
     setShowNotifications(false);
     onNavigate('notifications');
@@ -84,21 +74,21 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
   const displayName = user?.displayName?.split(' ')[0] || 'Usuario';
 
   return (
-    <div className="flex flex-col w-full h-screen bg-red-50 font-sans relative overflow-hidden">
+    <div className="flex flex-col w-full h-screen bg-gray-50 font-sans relative overflow-hidden">
       
-      {/* --- HEADER (Fijo arriba) --- */}
-      <div className="pt-12 pb-4 px-6 flex justify-between items-center shrink-0 bg-red-50 z-20 relative">
+      {/* --- HEADER --- */}
+      <div className="pt-12 pb-2 px-6 flex justify-between items-center shrink-0 z-20 relative">
         <div className="flex-1 mr-4">
           {isSearchOpen ? (
-            <div className="flex items-center bg-white rounded-full px-4 py-2 animate-fade-in shadow-sm">
-              <Search size={18} className="text-gray-500 mr-2" />
+            <div className="flex items-center bg-white rounded-full px-4 py-3 animate-fade-in shadow-sm border border-gray-100">
+              <Search size={18} className="text-gray-400 mr-2" />
               <input 
                 autoFocus
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar evento..."
-                className="bg-transparent outline-none w-full text-gray-800 placeholder-gray-400"
+                placeholder="Buscar..."
+                className="bg-transparent outline-none w-full text-gray-800 placeholder-gray-400 text-sm"
               />
               <button onClick={() => {setIsSearchOpen(false); setSearchTerm('');}} className="text-gray-400 hover:text-gray-600">
                 <X size={18} />
@@ -108,7 +98,7 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
             <div className="flex items-center gap-3 animate-fade-in">
               <div 
                 onClick={() => onNavigate('profile')}
-                className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-sm bg-gray-100 cursor-pointer active:scale-90 transition-transform"
+                className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-md bg-gray-200 cursor-pointer active:scale-90 transition-transform"
               >
                 {user?.photoURL ? (
                   <img src={user.photoURL} alt="User" className="w-full h-full object-cover" />
@@ -116,54 +106,58 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
                   <div className="w-full h-full flex items-center justify-center text-gray-400"><User /></div>
                 )}
               </div>
-              <h1 className="text-lg font-bold text-gray-800 drop-shadow-sm">Hola, {displayName}!</h1>
+              <div>
+                <p className="text-xs text-gray-400 font-medium">Hola,</p>
+                <h1 className="text-lg font-black text-gray-800 leading-none">{displayName}</h1>
+              </div>
             </div>
           )}
         </div>
 
         <div className="flex gap-3 shrink-0">
           {!isSearchOpen && (
-            <button onClick={() => setIsSearchOpen(true)} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-600 shadow-md active:scale-95 transition-transform hover:scale-105">
+            <button onClick={() => setIsSearchOpen(true)} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-600 shadow-sm border border-gray-100 active:scale-95 transition-transform">
               <Search size={20} />
             </button>
           )}
           <button 
             onClick={() => setShowNotifications(true)}
-            className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-600 shadow-md active:scale-95 transition-transform hover:scale-105 relative"
+            className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-600 shadow-sm border border-gray-100 active:scale-95 transition-transform relative"
           >
             <Bell size={20} />
-            {hasNewNotifs && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>}
+            {hasNewNotifs && <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border border-white animate-pulse"></span>}
           </button>
         </div>
       </div>
 
       {/* --- FILTRO --- */}
-      <div className="px-6 py-2 bg-red-50 z-10 relative shrink-0 mb-2">
-        <div className="relative">
+      <div className="px-6 mb-2 shrink-0 z-10">
+        <div className="relative inline-block w-full">
           <button 
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className="w-full bg-white text-gray-800 rounded-2xl py-3.5 px-5 flex items-center justify-between shadow-md active:bg-gray-50 transition-all hover:shadow-lg"
+            className="bg-white text-gray-800 rounded-2xl py-3 px-5 flex items-center justify-between shadow-sm border border-gray-100 active:bg-gray-50 w-full"
           >
-            <div className="flex items-center gap-3">
-              <Filter size={18} className="text-orange-500" />
+            <div className="flex items-center gap-2">
               <span className="font-bold text-sm tracking-wide">
-                {filterType === 'upcoming' ? 'Eventos Próximos' : 'Eventos Pasados'}
+                {filterType === 'upcoming' ? 'Próximos Eventos' : 'Historial Pasado'}
               </span>
             </div>
-            <ChevronDown size={16} className={`text-gray-400 transform transition duration-300 ${isFilterOpen ? 'rotate-180' : ''}`} />
+            <div className="flex items-center gap-2 text-gray-400">
+               <ChevronDown size={16} className={`transform transition duration-300 ${isFilterOpen ? 'rotate-180' : ''}`} />
+            </div>
           </button>
 
           {isFilterOpen && (
             <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-xl overflow-hidden z-50 animate-slide-down border border-gray-100">
               <button 
                 onClick={() => { setFilterType('upcoming'); setIsFilterOpen(false); }}
-                className={`w-full text-left px-5 py-3.5 text-sm font-medium hover:bg-orange-50 flex items-center justify-between transition-colors ${filterType === 'upcoming' ? 'text-orange-600 bg-orange-50' : 'text-gray-600'}`}
+                className={`w-full text-left px-5 py-3.5 text-sm font-medium hover:bg-gray-50 flex items-center justify-between transition-colors ${filterType === 'upcoming' ? 'text-orange-600 bg-orange-50' : 'text-gray-600'}`}
               >
                 Próximos {filterType === 'upcoming' && <Check size={16}/>}
               </button>
               <button 
                 onClick={() => { setFilterType('past'); setIsFilterOpen(false); }}
-                className={`w-full text-left px-5 py-3.5 text-sm font-medium hover:bg-orange-50 flex items-center justify-between transition-colors ${filterType === 'past' ? 'text-orange-600 bg-orange-50' : 'text-gray-600'}`}
+                className={`w-full text-left px-5 py-3.5 text-sm font-medium hover:bg-gray-50 flex items-center justify-between transition-colors ${filterType === 'past' ? 'text-orange-600 bg-orange-50' : 'text-gray-600'}`}
               >
                 Pasados {filterType === 'past' && <Check size={16}/>}
               </button>
@@ -172,133 +166,153 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
         </div>
       </div>
 
-      {/* --- LISTA DE EVENTOS --- */}
-      <div className="flex-1 w-full overflow-y-auto px-4 pb-32 space-y-6 scroll-smooth">
+      {/* --- CARRUSEL DE EVENTOS --- */}
+      <div className="flex-1 w-full flex flex-col justify-center overflow-hidden relative">
         
         {filteredEvents.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center opacity-80 -mt-10">
-            <div className="bg-white p-6 rounded-full mb-4 shadow-md">
-              <Calendar size={36} className="text-orange-300" />
+          <div className="flex flex-col items-center justify-center text-center px-8 -mt-20">
+            <div className="bg-white p-6 rounded-3xl mb-4 shadow-sm border border-gray-100">
+              <Calendar size={32} className="text-gray-300" />
             </div>
-            <h2 className="text-lg font-bold text-gray-700 mb-1">Sin eventos {filterType === 'upcoming' ? 'próximos' : 'pasados'}</h2>
-            <p className="text-gray-500 text-sm mb-6">No se encontraron resultados.</p>
+            <h2 className="text-lg font-bold text-gray-700 mb-1">Sin eventos</h2>
+            <p className="text-gray-400 text-sm mb-6">
+              {filterType === 'upcoming' ? 'No tienes planes pronto.' : 'Historial vacío.'}
+            </p>
             
             {filterType === 'upcoming' && (
               <button 
                 onClick={() => onNavigate('create')}
-                className="bg-white text-orange-600 px-8 py-3 rounded-full font-bold shadow-lg hover:bg-gray-50 transition active:scale-95 border border-orange-100"
+                className="bg-orange-500 text-white px-6 py-3 rounded-full font-bold shadow-lg shadow-orange-200 active:scale-95 transition text-sm"
               >
-                Crear evento
+                Crear Evento
               </button>
             )}
           </div>
 
         ) : (
-          filteredEvents.map((evt) => (
-            <div 
-              key={evt.id} 
-              onClick={() => onSelectEvent(evt)}
-              className={`relative overflow-hidden w-full min-h-[450px] rounded-[2.5rem] p-8 text-white shadow-xl cursor-pointer transform transition hover:scale-[1.01] active:scale-[0.99] flex flex-col justify-between
-                ${evt.isMyEvent ? 'bg-gradient-to-br from-orange-400 to-orange-600' : 'bg-gradient-to-br from-purple-500 to-indigo-600'}
-              `}
-            >
-              <PartyPopper className="absolute top-8 left-6 text-white opacity-20 rotate-[-15deg]" size={40} />
-              <Cake className="absolute bottom-8 right-6 text-white opacity-20 rotate-[10deg]" size={64} />
-              <div className="absolute top-0 right-0 w-48 h-48 bg-white opacity-10 rounded-bl-full pointer-events-none blur-xl"></div>
+          // Contenedor Scroll
+          <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 px-4 items-center h-full w-full scrollbar-hide pt-1 pb-4">
+            {filteredEvents.map((evt) => (
+              <div 
+                key={evt.id} 
+                onClick={() => onSelectEvent(evt)}
+                className={`snap-center shrink-0 relative overflow-hidden w-[93%] md:w-[400px] h-[78vh] rounded-[2.5rem] p-5 text-white shadow-2xl shadow-gray-300/50 cursor-pointer transform transition active:scale-[0.98] flex flex-col justify-between
+                  ${evt.isMyEvent ? 'bg-gradient-to-b from-orange-500 to-red-600' : 'bg-gradient-to-b from-purple-600 to-indigo-700'}
+                `}
+              >
+                {/* Decoraciones Fondo */}
+                <div className="absolute top-0 right-0 w-72 h-72 bg-white opacity-10 rounded-bl-full pointer-events-none blur-3xl"></div>
+                <PartyPopper className="absolute top-12 -left-6 text-white opacity-10 rotate-[-15deg]" size={100} />
 
-              {/* BADGE: ANFITRION vs INVITADO */}
-              <div className="relative z-10 flex justify-between mt-4 px-2">
-                 <span className="bg-black/20 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest backdrop-blur-md border border-white/10 shadow-sm">
-                  {evt.type}
-                </span>
-                {evt.isMyEvent ? (
-                  <span className="bg-orange-500/80 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 border border-white/20">
-                    <Crown size={12} /> Anfitrión
+                {/* Top: Tipo y Rol */}
+                <div className="relative z-10 flex justify-between items-start">
+                  <span className="bg-black/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest backdrop-blur-md border border-white/10">
+                    {evt.type}
                   </span>
-                ) : (
-                  <span className="bg-indigo-400/80 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 border border-white/20">
-                    <User size={12} /> Invitado
-                  </span>
-                )}
-              </div>
+                  {evt.isMyEvent ? (
+                    <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm border border-white/10">
+                      <Crown size={16} className="text-white" />
+                    </div>
+                  ) : (
+                    <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm border border-white/10">
+                       <User size={16} className="text-white" />
+                    </div>
+                  )}
+                </div>
 
-              <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center my-6 px-2">
-                <h3 className="text-5xl font-black leading-none mb-4 drop-shadow-lg tracking-tighter line-clamp-4 break-words w-full">
-                  {evt.name}
-                </h3>
-              </div>
-              
-              <div className="relative z-10 flex flex-col gap-3 text-orange-50 text-base font-medium w-full mb-4">
-                <div className="flex items-center justify-center gap-3 bg-black/10 px-6 py-4 rounded-3xl backdrop-blur-sm border border-white/5 w-full shadow-inner">
-                  <Calendar size={20} className="shrink-0" />
-                  <span>{new Date(evt.date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+                {/* Centro: Título Gigante (Ajustado para evitar cortes raros) */}
+                <div className="relative z-10 mt-4 mb-auto flex flex-col justify-center h-full">
+                  <h3 className="text-4xl font-black leading-[1.0] drop-shadow-lg line-clamp-5 text-pretty tracking-tight">
+                    {evt.name}
+                  </h3>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-3 w-full">
-                    <div className="flex items-center justify-center gap-2 bg-black/10 px-4 py-3 rounded-3xl backdrop-blur-sm border border-white/5 shadow-inner">
-                        <Clock size={18} className="shrink-0" />
-                        {evt.time}
-                    </div>
-                    <div className="flex items-center justify-center gap-2 bg-black/10 px-4 py-3 rounded-3xl backdrop-blur-sm border border-white/5 shadow-inner overflow-hidden">
-                        <MapPin size={18} className="shrink-0" />
-                        <span className="truncate text-sm">{evt.locationName || "Mapa"}</span>
-                    </div>
+                {/* Bottom: DATOS (Transparente CLARO) */}
+                <div className="relative z-10 bg-white/10 backdrop-blur-md rounded-[2rem] p-5 border border-white/20 shadow-sm mt-4">
+                     
+                     {/* Fila 1: Fecha Completa (Sin Icono) */}
+                     <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/10">
+                        {/* Se eliminó el icono del calendario que estaba aquí */}
+                        <div className="pl-2">
+                           <p className="text-3xl font-bold leading-none">
+                             {new Date(evt.date + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
+                           </p>
+                           <p className="text-sm text-white/80 font-medium uppercase tracking-wide mt-1">
+                             {new Date(evt.date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long' })}
+                           </p>
+                        </div>
+                     </div>
+
+                     {/* Fila 2: Hora y Lugar */}
+                     <div className="grid grid-cols-2 gap-3">
+                        <div className="flex items-center gap-2">
+                           <Clock size={16} className="text-white/70 shrink-0" />
+                           <span className="text-sm font-bold text-white truncate">{evt.time}</span>
+                        </div>
+                        <div className="flex items-center gap-2 overflow-hidden">
+                           <MapPin size={16} className="text-white/70 shrink-0" />
+                           <span className="text-sm font-bold text-white truncate">{evt.locationName || "Ubicación"}</span>
+                        </div>
+                     </div>
                 </div>
+
               </div>
-            </div>
-          ))
+            ))}
+            
+            {/* Espaciador final */}
+            <div className="w-2 shrink-0"></div>
+          </div>
         )}
       </div>
 
-      {/* FAB: Solo si estás en Upcoming */}
+      {/* FAB: Crear Evento */}
       {filterType === 'upcoming' && (
         <button 
           onClick={() => onNavigate('create')}
-          className="absolute bottom-8 right-6 w-16 h-16 bg-white text-orange-500 rounded-full shadow-2xl border border-orange-100 flex items-center justify-center z-30 active:scale-90 hover:bg-gray-50 transition-transform"
+          className="absolute bottom-6 right-6 w-14 h-14 bg-gray-900 text-white rounded-full shadow-xl flex items-center justify-center z-30 active:scale-90 transition-transform border-4 border-gray-50"
         >
-          <span className="text-4xl font-light leading-none pb-1">+</span>
+          <span className="text-3xl font-light leading-none pb-1">+</span>
         </button>
       )}
 
-      {/* NOTIFICACIONES MINI (Overlay) */}
+      {/* NOTIFICACIONES MINI */}
       {showNotifications && (
         <div className="fixed inset-0 z-50 flex justify-end animate-fade-in">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setShowNotifications(false)}></div>
-          <div className="relative w-full max-w-sm bg-white h-full shadow-2xl animate-slide-in-right flex flex-col">
-            <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h2 className="font-bold text-xl text-gray-800 flex items-center gap-2">
-                <Bell size={20} className="text-orange-500" /> Notificaciones
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => setShowNotifications(false)}></div>
+          <div className="relative w-full max-w-xs bg-white h-full shadow-2xl animate-slide-in-right flex flex-col border-l border-gray-100">
+            <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h2 className="font-bold text-lg text-gray-800 flex items-center gap-2">
+                Notificaciones
               </h2>
-              <button onClick={() => setShowNotifications(false)} className="p-2 bg-white rounded-full shadow-sm text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition">
-                <X size={22} />
+              <button onClick={() => setShowNotifications(false)} className="p-2 bg-white rounded-full shadow-sm text-gray-500 hover:text-gray-800 transition">
+                <X size={20} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50/50">
               {notifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-gray-400 opacity-70">
-                  <Bell size={40} className="mb-3 text-gray-300" />
-                  <p>Estás al día</p>
+                  <Bell size={32} className="mb-3 text-gray-300" />
+                  <p className="text-sm">Sin novedades</p>
                 </div>
               ) : (
                 notifications.map(notif => (
-                  <div key={notif.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-3 transition-shadow hover:shadow-md">
+                  <div key={notif.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-3">
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 shrink-0 font-bold border border-orange-200">
+                      <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 shrink-0 font-bold text-xs">
                         {notif.fromName?.charAt(0)}
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600 leading-tight mb-1">
+                        <p className="text-xs text-gray-500 leading-tight mb-1">
                           <span className="font-bold text-gray-900">{notif.fromName}</span> te invitó a:
                         </p>
-                        <p className="font-bold text-orange-600 text-lg">{notif.eventName}</p>
+                        <p className="font-bold text-orange-600 text-sm">{notif.eventName}</p>
                       </div>
                     </div>
-                    {/* Botón unificado para gestionar */}
                     <button 
                       onClick={handleQuickViewNotif} 
-                      className="w-full bg-orange-500 text-white py-2.5 rounded-xl text-xs font-bold active:scale-95 shadow-md shadow-orange-200 transition"
+                      className="w-full bg-gray-900 text-white py-2 rounded-xl text-xs font-bold active:scale-95 transition"
                     >
-                      Responder Invitación
+                      Ver
                     </button>
                   </div>
                 ))
