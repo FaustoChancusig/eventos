@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
@@ -6,9 +6,12 @@ import {
   updateProfile 
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'; // Importamos funciones de Storage
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, db, storage } from '../config/firebase';
-import { AlertCircle, CheckCircle, User, Mail, Lock, Phone, Camera, X } from 'lucide-react';
+import { 
+  User, Mail, Lock, Phone, Camera, X, 
+  Eye, EyeOff, AlertTriangle, CheckCircle2 
+} from 'lucide-react';
 
 export default function AuthPage() {
   const [view, setView] = useState('login'); 
@@ -19,18 +22,33 @@ export default function AuthPage() {
   const [confirmPass, setConfirmPass] = useState(''); 
   const [username, setUsername] = useState('');       
   const [phone, setPhone] = useState(''); 
-  const [photoFile, setPhotoFile] = useState(null); // Estado para el archivo de foto
-  const [photoPreview, setPhotoPreview] = useState(null); // Para mostrar la previsualización
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
   
+  // Estados de UI
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState({ text: '', type: '' }); 
+  const [message, setMessage] = useState({ text: '', type: '' });
+  
+  // Estados para visibilidad de contraseña
+  const [showPass, setShowPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+
+  // --- NUEVO: AUTO-OCULTAR ALERTA ---
+  // Si hay un mensaje, lo borramos automáticamente a los 5 segundos
+  useEffect(() => {
+    if (message.text) {
+      const timer = setTimeout(() => {
+        setMessage({ text: '', type: '' });
+      }, 5000); // 5 segundos
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
 
   // --- MANEJO DE FOTO ---
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       setPhotoFile(file);
-      // Crear URL temporal para previsualizar
       const previewUrl = URL.createObjectURL(file);
       setPhotoPreview(previewUrl);
     }
@@ -40,7 +58,7 @@ export default function AuthPage() {
   const validateForm = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setMessage({ text: "El formato del correo es incorrecto.", type: 'error' });
+      setMessage({ text: "El formato del correo es inválido.", type: 'error' });
       return false;
     }
 
@@ -54,7 +72,7 @@ export default function AuthPage() {
         return false;
       }
       if (pass.length < 6) {
-        setMessage({ text: "La contraseña es muy corta.", type: 'error' });
+        setMessage({ text: "La contraseña debe tener al menos 6 caracteres.", type: 'error' });
         return false;
       }
       if (pass !== confirmPass) {
@@ -71,146 +89,164 @@ export default function AuthPage() {
     if (!validateForm()) return;
 
     setLoading(true);
-    setMessage({ text: '', type: '' });
-
+    // No borramos mensaje aquí inmediatamente para que la animación se vea fluida si cambia de error a carga
+    
     try {
       if (view === 'login') {
         await signInWithEmailAndPassword(auth, email, pass);
+        // Login exitoso
       
       } else if (view === 'register') {
-        // 1. Crear usuario
         const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
         const user = userCredential.user;
-        let photoURL = ""; // Por defecto vacía
+        let photoURL = ""; 
 
-        // 2. Si seleccionó foto, subirla a Firebase Storage
         if (photoFile) {
-          // Creamos una referencia: carpeta 'avatars' / id_usuario
           const storageRef = ref(storage, `avatars/${user.uid}`);
           await uploadBytes(storageRef, photoFile);
-          // Obtenemos la URL pública de internet
           photoURL = await getDownloadURL(storageRef);
         }
 
-        // 3. Actualizar perfil de Auth (ahora con foto)
         await updateProfile(user, { 
           displayName: username,
-          photoURL: photoURL // Guardamos la URL aquí
+          photoURL: photoURL 
         });
 
-        // 4. Guardar datos en Firestore
         await setDoc(doc(db, "users", user.uid), {
           uid: user.uid,
           username: username,
           email: email,
           phone: phone,
-          photoURL: photoURL, // Y también aquí para fácil acceso
+          photoURL: photoURL,
           createdAt: new Date().toISOString()
         });
 
-        setMessage({ text: "¡Registro exitoso!", type: 'success' });
+        setMessage({ text: "¡Cuenta creada exitosamente! Bienvenido.", type: 'success' });
       }
     } catch (error) {
       console.error(error);
-      let msg = "Ocurrió un error.";
-      if (error.code === 'auth/email-already-in-use') msg = "El correo ya está registrado.";
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') msg = "Credenciales incorrectas.";
+      let msg = "Ocurrió un error inesperado.";
+      if (error.code === 'auth/email-already-in-use') msg = "Este correo ya está registrado.";
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') msg = "Credenciales incorrectas.";
+      if (error.code === 'auth/too-many-requests') msg = "Demasiados intentos. Intenta más tarde.";
       setMessage({ text: msg, type: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
-  // ... (Lógica de Reset igual)
   const handleResetSubmit = async (e) => {
       e.preventDefault();
-      // ... (misma lógica que tenías antes)
-      if (!email) { setMessage({text: "Ingresa tu correo", type: 'error'}); return; }
+      if (!email) { setMessage({text: "Ingresa tu correo para continuar.", type: 'error'}); return; }
       setLoading(true);
       try {
           await sendPasswordResetEmail(auth, email);
-          setMessage({text: "Enlace enviado.", type: 'success'});
-          setTimeout(() => setView('login'), 4000);
-      } catch(e) { setMessage({text: "Error enviando correo", type: 'error'}); }
-      finally { setLoading(false); }
+          setMessage({text: "Hemos enviado un enlace de recuperación a tu correo.", type: 'success'});
+          // Regresamos al login después de 3.5 segundos para que le de tiempo a leer
+          setTimeout(() => {
+             setView('login');
+             // Opcional: Si quieres que al cambiar se borre la alerta inmediatamente descomenta esto:
+             // setMessage({ text: '', type: '' }); 
+          }, 3500);
+      } catch(e) { 
+        setMessage({text: "No pudimos enviar el correo. Verifica que sea correcto.", type: 'error'}); 
+      } finally { 
+        setLoading(false); 
+      }
   };
 
   const isRegister = view === 'register';
   const isReset = view === 'reset';
-  const msgStyle = message.type === 'success' ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200";
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-gradient-to-br from-purple-700 via-purple-600 to-blue-600 font-sans animate-fade-in">
-      <div className="text-center mb-6">
-        <h1 className="text-4xl font-bold text-white tracking-tight">EventMaster</h1>
-        <p className="text-purple-200">Tu comunidad de eventos</p>
-      </div>
+    <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-gradient-to-br from-orange-700 via-orange-600 to-blue-600 font-sans relative">
       
+      {/* --- ALERTA FLOTANTE (TOAST) --- */}
+      {/* fixed: La fija a la pantalla
+          top-4: Margen superior
+          z-50: Asegura que esté siempre encima de todo
+          animate-fade-in-down: Animación de entrada suave
+      */}
       {message.text && (
-        <div className={`w-full max-w-md p-3 mb-4 rounded-lg border text-sm text-center font-medium ${msgStyle}`}>
-          {message.text}
+        <div className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4 animate-[slideDown_0.5s_ease-out]">
+          <div className={`w-full max-w-md flex items-start gap-3 p-4 rounded-xl shadow-2xl border-l-4 backdrop-blur-md transition-all ${
+            message.type === 'success' 
+              ? "bg-white/95 border-green-500 text-gray-800" 
+              : "bg-white/95 border-red-500 text-gray-800"
+          }`}>
+            <div className="mt-0.5 shrink-0">
+              {message.type === 'success' ? <CheckCircle2 className="text-green-500" size={22} /> : <AlertTriangle className="text-red-500" size={22} />}
+            </div>
+            <div className="flex-1">
+              <h4 className={`font-bold text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                {message.type === 'success' ? '¡Excelente!' : 'Atención'}
+              </h4>
+              <p className="text-sm font-medium mt-0.5 leading-snug">{message.text}</p>
+            </div>
+            <button onClick={() => setMessage({text:'', type:''})} className="text-gray-400 hover:text-gray-600 transition-colors shrink-0 p-1">
+              <X size={18} />
+            </button>
+          </div>
         </div>
       )}
 
-      <div className="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl">
+      <div className="text-center mb-8 animate-fade-in-down">
+        <h1 className="text-5xl font-extrabold text-white tracking-tight drop-shadow-md">EventMaster</h1>
+        <p className="text-orange-100 text-lg mt-2 font-light">Tu comunidad de eventos exclusiva</p>
+      </div>
+      
+      <div className="bg-white/95 backdrop-blur-sm w-full max-w-md rounded-3xl p-8 shadow-2xl border border-white/20">
         <h2 className="text-2xl font-bold mb-6 text-gray-800 border-b pb-4 border-gray-100">
-          {isReset ? 'Recuperar Contraseña' : (isRegister ? 'Crear Cuenta' : 'Iniciar Sesión')}
+          {isReset ? 'Recuperar Acceso' : (isRegister ? 'Crear Cuenta' : 'Bienvenido de nuevo')}
         </h2>
 
         <form onSubmit={isReset ? handleResetSubmit : handleAuthSubmit} className="space-y-4">
           
-          {/* --- SECCIÓN FOTO DE PERFIL (Solo Registro) --- */}
           {isRegister && (
             <div className="flex flex-col items-center mb-4">
               <div className="relative w-24 h-24 mb-2">
-                {photoPreview ? (
-                  <img src={photoPreview} alt="Preview" className="w-full h-full rounded-full object-cover border-2 border-purple-200 shadow-md" />
-                ) : (
-                  <div className="w-full h-full rounded-full bg-gray-100 flex items-center justify-center border-2 border-dashed border-gray-300 text-gray-400">
-                    <Camera size={32} />
+                <label htmlFor="photo-upload" className="block w-full h-full rounded-full cursor-pointer group relative hover:opacity-90 transition-opacity">
+                  {photoPreview ? (
+                    <img src={photoPreview} alt="Preview" className="w-full h-full rounded-full object-cover border-4 border-orange-100 shadow-md group-hover:border-orange-200 transition-all" />
+                  ) : (
+                    <div className="w-full h-full rounded-full bg-gray-50 flex items-center justify-center border-2 border-dashed border-gray-300 text-gray-400 group-hover:bg-gray-100 transition-all">
+                      <Camera size={32} />
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 right-0 bg-orange-600 text-white p-2 rounded-full shadow-lg transition-transform group-hover:scale-110">
+                    <Camera size={16} />
                   </div>
-                )}
-                {/* Input oculto trucado con etiqueta */}
-                <label htmlFor="photo-upload" className="absolute bottom-0 right-0 bg-purple-600 text-white p-1.5 rounded-full cursor-pointer hover:bg-purple-700 shadow-sm">
-                  <Camera size={14} />
                 </label>
-                <input 
-                  id="photo-upload" 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleFileChange} 
-                  className="hidden" 
-                />
+                <input id="photo-upload" type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
               </div>
-              <p className="text-xs text-gray-400">Foto de perfil (Opcional)</p>
+              <p className="text-xs font-medium text-gray-400">Sube tu foto (Opcional)</p>
             </div>
           )}
 
           {isRegister && (
             <>
-              {/* Inputs de Registro (Igual que antes) */}
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Usuario</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 text-gray-400" size={18} />
-                  <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 border outline-none focus:border-purple-500 transition-all" placeholder="Ej. gamer_pro" />
+                  <User className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                  <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 border border-gray-200 outline-none focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-100 transition-all" placeholder="Ej. AlexGamer" />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Teléfono</label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-3 text-gray-400" size={18} />
-                  <input type="tel" value={phone} onChange={e => { if(e.target.value === '' || /^\d+$/.test(e.target.value)) setPhone(e.target.value) }} className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 border outline-none focus:border-purple-500 transition-all" placeholder="Solo números" maxLength={10} />
+                  <Phone className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                  <input type="tel" value={phone} onChange={e => { if(e.target.value === '' || /^\d+$/.test(e.target.value)) setPhone(e.target.value) }} className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 border border-gray-200 outline-none focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-100 transition-all" placeholder="Solo números" maxLength={10} />
                 </div>
               </div>
             </>
           )}
 
           <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Correo</label>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Correo Electrónico</label>
             <div className="relative">
-              <Mail className="absolute left-3 top-3 text-gray-400" size={18} />
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 border outline-none focus:border-purple-500 transition-all" placeholder="tu@correo.com" />
+              <Mail className="absolute left-3 top-3.5 text-gray-400" size={18} />
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 border border-gray-200 outline-none focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-100 transition-all" placeholder="nombre@ejemplo.com" />
             </div>
           </div>
 
@@ -219,33 +255,72 @@ export default function AuthPage() {
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Contraseña</label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 text-gray-400" size={18} />
-                  <input type="password" value={pass} onChange={e => setPass(e.target.value)} className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 border outline-none focus:border-purple-500 transition-all" placeholder="••••••••" />
+                  <Lock className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                  <input type={showPass ? "text" : "password"} value={pass} onChange={e => setPass(e.target.value)} className="w-full pl-10 pr-12 py-3 rounded-xl bg-gray-50 border border-gray-200 outline-none focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-100 transition-all" placeholder="••••••••" />
+                  <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-3 text-gray-400 hover:text-orange-600 transition-colors p-1">
+                    {showPass ? <EyeOff size={23} /> : <Eye size={23} />}
+                  </button>
                 </div>
               </div>
+
               {isRegister && (
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Confirmar</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Confirmar Contraseña</label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-3 text-gray-400" size={18} />
-                    <input type="password" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} className={`w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 border outline-none transition-all ${confirmPass && pass !== confirmPass ? "border-red-300 bg-red-50" : "border-gray-200 focus:border-purple-500"}`} placeholder="Repite contraseña" />
+                    <Lock className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                    <input 
+                      type={showConfirmPass ? "text" : "password"} 
+                      value={confirmPass} 
+                      onChange={e => setConfirmPass(e.target.value)} 
+                      className={`w-full pl-10 pr-12 py-3 rounded-xl bg-gray-50 border outline-none focus:ring-2 transition-all ${
+                        confirmPass && pass !== confirmPass 
+                        ? "border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-100" 
+                        : "border-gray-200 focus:border-orange-500 focus:bg-white focus:ring-orange-100"
+                      }`} 
+                      placeholder="Repite la contraseña" 
+                    />
+                    <button type="button" onClick={() => setShowConfirmPass(!showConfirmPass)} className="absolute right-3 top-3 text-gray-400 hover:text-orange-600 transition-colors p-1">
+                      {showConfirmPass ? <EyeOff size={23} /> : <Eye size={23} />}
+                    </button>
                   </div>
+                  {confirmPass && pass !== confirmPass && (
+                    <p className="text-xs text-red-500 mt-1 ml-1 font-medium">Las contraseñas no coinciden</p>
+                  )}
                 </div>
               )}
             </>
           )}
 
-          <button disabled={loading} className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-[0.98] disabled:opacity-60 mt-4">
-            {loading ? 'Procesando...' : (isReset ? 'Enviar' : (isRegister ? 'Registrarme' : 'Ingresar'))}
+          <button 
+            disabled={loading} 
+            className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/30 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed mt-4 flex justify-center items-center gap-2"
+          >
+            {loading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <span>Procesando...</span>
+              </>
+            ) : (
+              isReset ? 'Enviar Enlace' : (isRegister ? 'Registrarme Ahora' : 'Iniciar Sesión')
+            )}
           </button>
         </form>
 
-        <div className="mt-6 pt-4 border-t border-gray-100 text-center space-y-3">
+        <div className="mt-4 text-center">
           {!isReset && !isRegister && (
-             <button onClick={() => {setMessage({text:'',type:''}); setView('reset')}} className="text-sm text-purple-600 hover:underline block w-full">¿Olvidaste tu contraseña?</button>
+             <button 
+               onClick={() => {setMessage({text:'',type:''}); setView('reset')}} 
+               className="text-xs text-gray-500 hover:text-orange-600 hover:underline transition-colors block w-full mb-3 font-medium"
+             >
+               ¿Olvidaste tu contraseña?
+             </button>
           )}
-          <button onClick={() => {setMessage({text:'',type:''}); setView(isRegister || isReset ? 'login' : 'register')}} className="text-purple-700 font-bold uppercase text-sm tracking-wide">
-            {isRegister || isReset ? 'Volver al Login' : 'Crear Cuenta Gratis'}
+          
+          <button 
+            onClick={() => {setMessage({text:'',type:''}); setView(isRegister || isReset ? 'login' : 'register')}} 
+            className="w-full py-3 rounded-xl border-2 border-orange-100 text-orange-700 font-bold text-xs uppercase tracking-wide hover:bg-orange-50 hover:border-orange-200 transition-all active:scale-[0.98]"
+          >
+            {isRegister || isReset ? 'Volver al Login' : 'Crear Cuenta Nueva'}
           </button>
         </div>
       </div>
