@@ -2,15 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Ajustes globales */
-body {
-  @apply bg-surface-50 text-ink font-sans;
+/* Reseteo global para asegurar pantalla completa */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
 }
 
-/* Safe area para móviles */
-.safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom);
+/* --- LA SOLUCIÓN AL MAPA BLANCO --- */
+/* Cuando esta clase está activa, forzamos transparencia total */
+.transparent-body {
+  background: transparent !important;
+  background-color: transparent !important;
+  --tw-bg-opacity: 0 !important;
 }
-.safe-top {
-  padding-top: env(safe-area-inset-top);
+
+.transparent-body body {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.transparent-body #root {
+  background: transparent !important;
+  background-color: transparent !important;
 }
