@@ -1,0 +1,145 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../config/firebase';
+import { Send, Lock, MessageCircle } from 'lucide-react';
+
+export default function EventChat({ eventId, user, isConfirmed }) {
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null); // Estado para mostrar errores
+  
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // 1. Escuchar mensajes
+  useEffect(() => {
+    if (!eventId) return;
+
+    if (!isConfirmed) {
+      setLoading(false);
+      return;
+    }
+
+    const q = query(
+      collection(db, 'events', eventId, 'chat'),
+      orderBy('createdAt', 'asc')
+    );
+
+    // Listener con manejo de errores
+    const unsubscribe = onSnapshot(q, 
+      (snapshot) => {
+        const msgs = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setMessages(msgs);
+        setLoading(false);
+        setTimeout(scrollToBottom, 100);
+      },
+      (err) => {
+        console.error("Error cargando chat:", err);
+        setError("No se pudo cargar el chat. Verifica permisos o conexión.");
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [eventId, isConfirmed]);
+
+  // 2. Enviar mensaje
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (newMessage.trim() === '') return;
+
+    try {
+      await addDoc(collection(db, 'events', eventId, 'chat'), {
+        text: newMessage,
+        senderId: user.uid,
+        senderName: user.displayName || 'Usuario',
+        createdAt: serverTimestamp()
+      });
+      setNewMessage('');
+    } catch (error) {
+      console.error("Error enviando mensaje:", error);
+      alert("Error al enviar. Intenta de nuevo.");
+    }
+  };
+
+  if (!isConfirmed) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-6 text-center text-gray-500 mt-10">
+        <div className="bg-gray-200 p-6 rounded-full mb-4">
+          <Lock size={40} className="text-gray-400" />
+        </div>
+        <h3 className="text-lg font-bold text-gray-700">Chat Bloqueado</h3>
+        <p className="text-sm mt-2 max-w-xs">
+          Debes confirmar tu asistencia al evento para poder ver y escribir en el chat.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-320px)]"> 
+      {/* Lista de Mensajes */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
+        {loading ? (
+          <p className="text-center text-xs text-gray-400 mt-4">Cargando chat...</p>
+        ) : error ? (
+           <div className="text-center text-red-500 text-sm mt-4 p-4 bg-red-50 rounded-lg">{error}</div>
+        ) : messages.length === 0 ? (
+          <div className="text-center text-gray-400 mt-10 flex flex-col items-center">
+            <MessageCircle size={32} className="mb-2 opacity-50"/>
+            <p className="text-sm">¡El chat está vacío! Di hola. 👋</p>
+          </div>
+        ) : (
+          messages.map((msg) => {
+            const isMe = msg.senderId === user.uid;
+            return (
+              <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow-sm ${
+                  isMe 
+                    ? 'bg-purple-600 text-white rounded-tr-sm' 
+                    : 'bg-white text-gray-800 border border-gray-200 rounded-tl-sm'
+                }`}>
+                  {!isMe && <p className="text-[10px] font-bold text-purple-600 mb-0.5">{msg.senderName}</p>}
+                  <p>{msg.text}</p>
+                  <p className={`text-[9px] mt-1 text-right ${isMe ? 'text-purple-200' : 'text-gray-400'}`}>
+                    {msg.createdAt?.seconds 
+                      ? new Date(msg.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      : ''}
+                  </p>
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <div className="p-3 bg-white border-t border-gray-200 pb-20 md:pb-3">
+        <form onSubmit={handleSendMessage} className="flex gap-2">
+          <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Escribe un mensaje..."
+            className="flex-1 bg-gray-100 rounded-full px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-purple-200 transition"
+          />
+          <button 
+            type="submit" 
+            disabled={!newMessage.trim()}
+            className="bg-purple-600 text-white p-3 rounded-full hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-md"
+          >
+            <Send size={18} />
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}

@@ -1,14 +1,16 @@
 import React, { useState, useMemo } from 'react';
 import { deleteDoc, doc, updateDoc, collection, query, where, getDocs, addDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { db } from '../config/firebase'; 
-// 🆕 Icono de Imagen para la galería
-import { Calendar, MapPin, ArrowLeft, Trash2, Users, Send, Check, HelpCircle, X, Crown, AlignLeft, Clock, Edit, Image } from 'lucide-react';
-// 🆕 Importamos el nuevo componente
+// 🆕 Icono de Imagen para la galería y MessageCircle para el chat
+import { Calendar, MapPin, ArrowLeft, Trash2, Users, Send, Check, HelpCircle, X, Crown, AlignLeft, Clock, Edit, Image, MessageCircle, AlertCircle } from 'lucide-react';
+
+// Importamos componentes
 import EventGallery from '../components/EventGallery';
+import EventChat from '../components/EventChat'; // 🆕 IMPORTAMOS EL CHAT
 
 export default function EventDetailPage({ event, user, onBack, onEdit }) {
   const [invitingIndex, setInvitingIndex] = useState(null); 
-  const [currentTab, setCurrentTab] = useState('info'); // 🆕 Estado para las pestañas
+  const [currentTab, setCurrentTab] = useState('info'); // Estado para las pestañas
   
   const isCreator = user?.uid === event.creatorId;
 
@@ -24,7 +26,7 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
   }, [event.attendees, user]);
 
   const currentStatus = myAttendance?.status || 'pending';
-  // 🆕 Lógica para la Galería: Solo confirmados pueden usarla
+  // Lógica: Solo confirmados (o el creador) pueden usar Galería y Chat
   const isConfirmed = currentStatus === 'confirmed';
 
 
@@ -115,7 +117,7 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
     }
   };
 
-  // 🆕 LÓGICA PARA FONDO DEL HEADER (Si tiene fondo, lo aplica)
+  // LÓGICA PARA FONDO DEL HEADER
   const headerBgClass = event.background?.type === 'gradient'
     ? `bg-gradient-to-br ${event.background.value}`
     : isCreator 
@@ -130,13 +132,12 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
   const themeAccentColor = isCreator ? 'text-orange-600' : 'text-purple-600';
   const themeBorderColor = isCreator ? 'border-orange-100' : 'border-purple-100';
 
-  // 🆕 Renderizado condicional de Contenido
+  // Renderizado condicional de Contenido
   const renderContent = () => {
     if (currentTab === 'info') {
       return (
         <div className="p-6 space-y-6">
           {/* SECCIÓN INVITADOS */}
-          {/* ... (Todo el contenido de invitados, widgets de info, y botones CRUD) ... */}
           <div className="mb-2">
             <div className="flex items-center justify-between mb-3 px-1">
               <h3 className={`font-bold text-sm uppercase tracking-wider ${themeAccentColor}`}>Invitados</h3>
@@ -173,13 +174,13 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
                          </div>
 
                          {needsInvitation && (
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); handleInvite(guest, index); }}
-                              disabled={invitingIndex === index}
-                              className="absolute -top-1 -right-1 w-7 h-7 bg-white text-orange-500 rounded-full shadow-md flex items-center justify-center hover:scale-110 active:scale-95 transition z-10 border border-orange-100"
-                            >
-                              {invitingIndex === index ? <span className="animate-spin h-3 w-3 border-2 border-orange-500 rounded-full border-t-transparent"></span> : <Send size={14} />}
-                            </button>
+                           <button 
+                             onClick={(e) => { e.stopPropagation(); handleInvite(guest, index); }}
+                             disabled={invitingIndex === index}
+                             className="absolute -top-1 -right-1 w-7 h-7 bg-white text-orange-500 rounded-full shadow-md flex items-center justify-center hover:scale-110 active:scale-95 transition z-10 border border-orange-100"
+                           >
+                             {invitingIndex === index ? <span className="animate-spin h-3 w-3 border-2 border-orange-500 rounded-full border-t-transparent"></span> : <Send size={14} />}
+                           </button>
                          )}
                        </div>
                        <span className={`text-xs mt-2 font-medium truncate max-w-[70px] ${isMe ? themeAccentColor + ' font-bold' : 'text-gray-600'}`}>
@@ -300,7 +301,7 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
     } 
     
     else if (currentTab === 'gallery') {
-      // 🆕 RENDERIZAR GALERÍA
+      // RENDERIZAR GALERÍA
       return (
         <div className="p-6">
           <EventGallery eventId={event.id} user={user} isConfirmed={isConfirmed || isCreator} />
@@ -312,6 +313,15 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
           )}
         </div>
       );
+    }
+
+    else if (currentTab === 'chat') {
+        // 🆕 RENDERIZAR CHAT
+        return (
+          <div className="h-full">
+            <EventChat eventId={event.id} user={user} isConfirmed={isConfirmed || isCreator} />
+          </div>
+        );
     }
   }
 
@@ -356,9 +366,10 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
         )}
       </div>
 
-      {/* --- PESTAÑAS --- */}
+      {/* --- PESTAÑAS (TABS) --- */}
       <div className="relative z-30 bg-gray-100 rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] -mt-8 pt-4 pb-0">
         <div className="flex justify-around border-b border-gray-200 px-6">
+          {/* BOTÓN INFO */}
           <button 
             onClick={() => setCurrentTab('info')} 
             className={`flex-1 py-3 text-center font-bold text-sm transition-colors border-b-2 ${
@@ -368,7 +379,7 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
             <Calendar size={18} className="inline mr-2" /> Info
           </button>
           
-          {/* PESTAÑA GALERÍA */}
+          {/* BOTÓN GALERÍA */}
           <button 
             onClick={() => setCurrentTab('gallery')} 
             className={`flex-1 py-3 text-center font-bold text-sm transition-colors border-b-2 ${
@@ -376,6 +387,16 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
             }`}
           >
             <Image size={18} className="inline mr-2" /> Galería
+          </button>
+
+          {/* 🆕 BOTÓN CHAT */}
+          <button 
+            onClick={() => setCurrentTab('chat')} 
+            className={`flex-1 py-3 text-center font-bold text-sm transition-colors border-b-2 ${
+              currentTab === 'chat' ? 'text-purple-600 border-purple-600' : 'text-gray-500 border-transparent hover:text-gray-700'
+            }`}
+          >
+            <MessageCircle size={18} className="inline mr-2" /> Chat
           </button>
         </div>
       </div>
