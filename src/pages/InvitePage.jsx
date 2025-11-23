@@ -1,108 +1,251 @@
-    import React, { useState } from 'react';
-// import { Contacts } from '@capacitor-community/contacts'; // <--- Descomentar esto en VS Code
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../config/firebase';
-import { ArrowLeft, Search, Smartphone, Share2, User } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+// import { Contacts } from "@capacitor-community/contacts";
+import { db } from "../config/firebase";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+} from "firebase/firestore";
+import {
+  ArrowLeft,
+  Search,
+  Smartphone,
+  Share2,
+  CheckCircle,
+  Users,
+} from "lucide-react";
 
-export default function InvitePage({ onBack, eventLink = "https://miapp.com/evento/123" }) {
+export default function InvitePage({
+  onBack,
+  eventLink = "https://miapp.com/event/123",
+}) {
   const [contacts, setContacts] = useState([]);
+  const [registered, setRegistered] = useState({});
+  const [filtered, setFiltered] = useState([]);
+  const [search, setSearch] = useState("");
+
+  const [selected, setSelected] = useState([]); // Contactos seleccionados
   const [loading, setLoading] = useState(false);
 
-  // --- MODO SIMULACIÓN PARA WEB ---
-  // En tu celular, este código será reemplazado por el de Capacitor
+  // 📌 SIMULACIÓN PARA WEB
   const loadContacts = async () => {
     setLoading(true);
-    
-    // Simulamos una espera de lectura de agenda
-    setTimeout(() => {
-      setContacts([
-        { name: { display: "Juan Pérez" }, phones: [{ number: "0991234567" }] },
-        { name: { display: "María López" }, phones: [{ number: "0987654321" }] },
-        { name: { display: "Carlos Tech" }, phones: [{ number: "+5939999999" }] },
-        { name: { display: "Ana Eventos" }, phones: [{ number: "0955555555" }] },
-      ]);
+
+    setTimeout(async () => {
+      const mock = [
+        { name: "Juan Pérez", phone: "0991234567" },
+        { name: "María López", phone: "0987654321" },
+        { name: "Carlos Tech", phone: "0955554444" },
+        { name: "Ana Eventos", phone: "0999999999" },
+      ];
+
+      setContacts(mock);
+      setFiltered(mock);
       setLoading(false);
-    }, 1000);
+
+      await detectRegisteredUsers(mock);
+    }, 800);
   };
 
-  const handleContactClick = async (contact) => {
-    // Lógica para limpiar el número
-    const rawPhone = contact.phones[0].number;
-    const cleanPhone = rawPhone.replace(/\D/g, ''); 
+  // 🔍 BUSCAR EN FIREBASE SI ALGÚN CONTACTO ESTÁ REGISTRADO
+  const detectRegisteredUsers = async (contactList) => {
+    const map = {};
 
-    // Verificación simulada en Firebase
-    // (En web real esto funcionará si tienes los datos en la BD)
-    alert(`Abriendo chat con ${contact.name.display} (${cleanPhone})...`);
-    
-    // En el celular, esto abrirá WhatsApp real:
-    // const whatsappUrl = `https://wa.me/${cleanPhone}?text=Hola...`;
-    // window.open(whatsappUrl, '_system');
+    for (const c of contactList) {
+      const cleanPhone = c.phone.replace(/\D/g, "");
+
+      const q = query(
+        collection(db, "users"),
+        where("phone", "==", cleanPhone)
+      );
+
+      const snap = await getDocs(q);
+
+      map[cleanPhone] = snap.size > 0;
+    }
+
+    setRegistered(map);
+  };
+
+  // 🔎 FILTRO SEARCH
+  useEffect(() => {
+    const q = search.toLowerCase();
+    const f = contacts.filter((c) =>
+      c.name.toLowerCase().includes(q)
+    );
+    setFiltered(f);
+  }, [search]);
+
+  // ✔️ SELECCIONAR CONTACTO
+  const toggleSelect = (phone) => {
+    setSelected((prev) =>
+      prev.includes(phone)
+        ? prev.filter((p) => p !== phone)
+        : [...prev, phone]
+    );
+  };
+
+  // ▶️ ENVIAR INVITACIONES MASIVAS POR WHATSAPP
+  const sendWhatsAppToSelected = () => {
+    if (selected.length === 0) return alert("Selecciona contactos primero");
+
+    const message = encodeURIComponent(
+      `¡Hola! 👋\nTe invito a mi evento:\n${eventLink}`
+    );
+
+    selected.forEach((phone) => {
+      window.open(`https://wa.me/${phone}?text=${message}`, "_system");
+    });
+  };
+
+  // 🔔 ENVIAR NOTIFICACIONES INTERNAS (solo registrados)
+  const notifyRegisteredUsers = () => {
+    const regUsers = contacts.filter((c) =>
+      registered[c.phone.replace(/\D/g, "")]
+    );
+
+    if (regUsers.length === 0)
+      return alert("Ninguno está registrado en la app");
+
+    alert(
+      "Notificaciones enviadas a:\n" +
+        regUsers.map((u) => `• ${u.name}`).join("\n")
+    );
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 animate-fade-in font-sans">
-      {/* Header */}
+    <div className="flex flex-col h-screen bg-gray-50 font-sans animate-fade-in">
+
+      {/* HEADER */}
       <div className="bg-white p-4 shadow-sm flex items-center sticky top-0 z-10">
-        <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full transition text-gray-600">
+        <button
+          onClick={onBack}
+          className="p-2 hover:bg-gray-100 rounded-full text-gray-600"
+        >
           <ArrowLeft size={24} />
         </button>
-        <h2 className="ml-4 text-lg font-bold text-gray-800">Invitar Amigos</h2>
+
+        <h2 className="ml-4 text-lg font-bold text-gray-800">
+          Invitar Amigos
+        </h2>
+
+        <button
+          onClick={() =>
+            navigator.share
+              ? navigator.share({ url: eventLink })
+              : alert(eventLink)
+          }
+          className="ml-auto p-2 bg-orange-50 text-orange-600 rounded-full"
+        >
+          <Share2 size={20} />
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
-        
-        {/* Estado Inicial */}
+
+        {/* INICIO */}
         {contacts.length === 0 && !loading && (
-          <div className="flex flex-col items-center justify-center h-64 text-center">
-            <div className="bg-purple-100 p-6 rounded-full mb-4 animate-bounce-slow">
-              <Share2 size={48} className="text-purple-600" />
+          <div className="text-center flex flex-col items-center justify-center h-64">
+            <div className="bg-orange-100 p-6 rounded-full mb-4 animate-bounce">
+              <Users size={48} className="text-orange-600" />
             </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">Sincroniza tu agenda</h3>
-            <p className="text-gray-500 mb-6 px-8 text-sm">
-              Busca en tus contactos para enviar invitaciones directas por WhatsApp o notificación.
+            <p className="text-gray-500 mb-6">
+              Importa tus contactos para enviar invitaciones masivas.
             </p>
-            <button 
+            <button
               onClick={loadContacts}
-              className="bg-purple-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg active:scale-95 transition-transform"
+              className="bg-orange-600 text-white px-8 py-3 rounded-xl font-bold"
             >
-              Ver Contactos
+              Ver contactos
             </button>
           </div>
         )}
 
-        {/* Estado de Carga */}
+        {/* CARGANDO */}
         {loading && (
-          <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mb-4"></div>
-            <p>Leyendo contactos...</p>
+          <div className="flex flex-col items-center justify-center h-64">
+            <div className="h-8 w-8 border-t-2 border-orange-600 rounded-full animate-spin"></div>
+            <p className="text-gray-500 mt-3">Cargando...</p>
           </div>
         )}
 
-        {/* Lista de Contactos */}
-        <div className="space-y-2">
-          {contacts.map((contact, index) => (
-            <div 
-              key={index}
-              onClick={() => handleContactClick(contact)}
-              className="bg-white p-4 rounded-xl border border-gray-100 flex items-center justify-between active:bg-purple-50 transition-colors cursor-pointer shadow-sm"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-purple-600 font-bold text-lg">
-                  {contact.name.display?.charAt(0) || '#'}
-                </div>
-                <div>
-                  <h4 className="font-bold text-gray-800">{contact.name.display}</h4>
-                  <p className="text-xs text-gray-400 font-mono">{contact.phones[0]?.number}</p>
-                </div>
-              </div>
-              <div className="bg-gray-50 p-2 rounded-full text-gray-400">
-                <Smartphone size={18} />
-              </div>
+        {/* BUSCADOR */}
+        {contacts.length > 0 && (
+          <div className="mb-4">
+            <div className="relative">
+              <Search
+                size={18}
+                className="absolute left-3 top-3 text-gray-400"
+              />
+              <input
+                type="text"
+                placeholder="Buscar contacto..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white border border-gray-200"
+              />
             </div>
-          ))}
-        </div>
+          </div>
+        )}
 
+        {/* LISTA */}
+        <div className="space-y-3 mb-20">
+          {filtered.map((c, i) => {
+            const cleanPhone = c.phone.replace(/\D/g, "");
+            const isAppUser = registered[cleanPhone];
+            const isSelected = selected.includes(cleanPhone);
+
+            return (
+              <div
+                key={i}
+                className={`p-4 bg-white rounded-2xl border shadow-sm flex items-center justify-between cursor-pointer ${
+                  isSelected ? "ring-2 ring-orange-400" : ""
+                }`}
+                onClick={() => toggleSelect(cleanPhone)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-200 to-orange-400 flex items-center justify-center text-white font-bold">
+                    {c.name.charAt(0)}
+                  </div>
+
+                  <div>
+                    <p className="font-bold text-gray-800">{c.name}</p>
+                    <p className="text-xs text-gray-400">{c.phone}</p>
+
+                    {isAppUser && (
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full mt-1 inline-flex items-center gap-1">
+                        <CheckCircle size={12} /> En la App
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <Smartphone className="text-gray-500" />
+              </div>
+            );
+          })}
+        </div>
       </div>
+
+      {/* FOOTER ACCIONES */}
+      {contacts.length > 0 && (
+        <div className="bg-white border-t p-4 fixed bottom-0 left-0 right-0 flex gap-3">
+          <button
+            onClick={sendWhatsAppToSelected}
+            className="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold"
+          >
+            WhatsApp ({selected.length})
+          </button>
+
+          <button
+            onClick={notifyRegisteredUsers}
+            className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold"
+          >
+            Notificar (App)
+          </button>
+        </div>
+      )}
     </div>
   );
 }

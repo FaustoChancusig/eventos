@@ -16,6 +16,9 @@ export default function App() {
   const [view, setView] = useState('loading'); 
   const [selectedEvent, setSelectedEvent] = useState(null); 
   
+  // 🆕 Estado para controlar si el detalle está en overlay (bottom sheet)
+  const [isDetailOverlayOpen, setIsDetailOverlayOpen] = useState(false);
+
   // 🆕 NUEVO: Estado para saber si estamos editando un evento existente
   const [eventToEdit, setEventToEdit] = useState(null);
 
@@ -26,6 +29,14 @@ export default function App() {
   // --- MANEJO DEL BOTÓN ATRÁS (ANDROID) ---
   useEffect(() => {
     const backButtonListener = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+
+      // 🆕 Primero: si está abierto el overlay de detalle, lo cerramos
+      if (isDetailOverlayOpen && selectedEvent) {
+        setIsDetailOverlayOpen(false);
+        // pequeño delay para permitir la animación antes de limpiar el evento
+        setTimeout(() => setSelectedEvent(null), 200);
+        return;
+      }
       
       // Si no estamos en Home/Login/Loading, volvemos atrás
       if (view !== 'home' && view !== 'login' && view !== 'loading') {
@@ -51,7 +62,7 @@ export default function App() {
     return () => {
       backButtonListener.remove();
     };
-  }, [view]);
+  }, [view, isDetailOverlayOpen, selectedEvent]);
 
   useEffect(() => {
     if (!auth) {
@@ -98,11 +109,17 @@ export default function App() {
           <HomePage 
             user={user} 
             onNavigate={(target) => {
-                // Al ir a crear desde el home, nos aseguramos de que sea uno nuevo
-                if (target === 'create') setEventToEdit(null);
-                setView(target);
+              // Al ir a crear desde el home, nos aseguramos de que sea uno nuevo
+              if (target === 'create') {
+                setEventToEdit(null);
+              }
+              setView(target);
             }} 
-            onSelectEvent={(evt) => { setSelectedEvent(evt); setView('detail'); }} 
+            // 🆕 Ahora solo abrimos overlay, no cambiamos a 'detail'
+            onSelectEvent={(evt) => { 
+              setSelectedEvent(evt); 
+              setIsDetailOverlayOpen(true);
+            }} 
           />
         );
       
@@ -110,25 +127,16 @@ export default function App() {
         return (
           <CreateEventPage 
             user={user} 
-            onBack={() => { setEventToEdit(null); setView('home'); }} 
-            eventToEdit={eventToEdit} // 🆕 Pasamos el evento a editar (si existe)
+            onBack={() => { 
+              setEventToEdit(null); 
+              setView('home'); 
+            }} 
+            eventToEdit={eventToEdit}
           />
         );
 
-      case 'detail':
-        return selectedEvent ? (
-          <EventDetailPage 
-            event={selectedEvent} 
-            user={user}
-            onBack={() => setView('home')} 
-            onEdit={(evt) => { // 🆕 Callback cuando el usuario pulsa Editar
-                setEventToEdit(evt);
-                setView('create');
-            }}
-          />
-        ) : (
-          (() => { setView('home'); return null; })()
-        );
+      // ❌ Ya no usamos 'detail' como vista aparte, ahora es overlay sobre Home
+      // case 'detail': ...
 
       case 'notifications':
         return (
@@ -137,6 +145,7 @@ export default function App() {
             onBack={() => setView('home')} 
           />
         );
+
       case 'profile':
         return (
           <ProfilePage 
@@ -153,6 +162,41 @@ export default function App() {
   return (
     <>
       {renderedView}
+
+      {/* 🆕 OVERLAY DETALLE DE EVENTO (Bottom sheet mobile friendly) */}
+      {selectedEvent && isDetailOverlayOpen && (
+        <div className="fixed inset-0 z-[998] bg-black/40 backdrop-blur-sm flex items-end animate-fade-in">
+          {/* Capa para cerrar al tocar fuera */}
+          <div 
+            className="absolute inset-0"
+            onClick={() => {
+              setIsDetailOverlayOpen(false);
+              setTimeout(() => setSelectedEvent(null), 200);
+            }}
+          ></div>
+
+          {/* Contenedor tipo bottom-sheet */}
+          <div className="relative w-full h-[92%] bg-gray-100 rounded-t-[32px] shadow-2xl z-[999] animate-slide-up overflow-hidden">
+            <EventDetailPage 
+              event={selectedEvent} 
+              user={user}
+              // Back dentro del detalle → solo cierra overlay
+              onBack={() => {
+                setIsDetailOverlayOpen(false);
+                setTimeout(() => setSelectedEvent(null), 200);
+              }} 
+              // Editar → cierra overlay y abre Create con el evento cargado
+              onEdit={(evt) => { 
+                setIsDetailOverlayOpen(false);
+                setSelectedEvent(null);
+                setEventToEdit(evt);
+                setView('create');
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {showExitToast && (
         <div className="fixed bottom-12 left-1/2 transform -translate-x-1/2 bg-black/80 text-white px-6 py-2 rounded-full text-sm shadow-lg z-[9999] pointer-events-none animate-fade-in">
           Presiona otra vez para salir

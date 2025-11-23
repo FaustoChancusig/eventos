@@ -175,7 +175,7 @@ export default function MapSelectorPage({ onClose, onConfirm, initialLat, initia
                             disabled={isLocating}
                             className="w-full outline-none text-sm font-medium text-gray-700 bg-transparent placeholder-gray-400 disabled:text-gray-400"
                         />
-                        {isGeocoding && <Loader2 size={16} className="animate-spin text-purple-600 ml-2" />}
+                        {isGeocoding && <Loader2 size={16} className="animate-spin text-orange-600 ml-2" />}
                     </div>
                 </div>
 
@@ -183,7 +183,7 @@ export default function MapSelectorPage({ onClose, onConfirm, initialLat, initia
                     <div className="mt-2 mx-2 rounded-2xl shadow-2xl border border-gray-100 pointer-events-auto overflow-hidden flex flex-col max-h-60 bg-white" style={{ backgroundColor: 'white' }}>
                         <div className="overflow-y-auto">
                             {suggestions.map((item, idx) => (
-                                <div key={idx} onClick={() => selectSuggestion(item)} className="p-4 border-b border-gray-50 hover:bg-purple-50 active:bg-purple-100 transition flex items-center gap-3 text-sm text-gray-700">
+                                <div key={idx} onClick={() => selectSuggestion(item)} className="p-4 border-b border-gray-50 hover:bg-orange-50 active:bg-orange-100 transition flex items-center gap-3 text-sm text-gray-700">
                                     <MapIcon size={16} className="text-gray-400 shrink-0" />
                                     <span className="truncate font-medium">{item.display_name.split(',')[0]} <span className="text-xs text-gray-400 font-normal block">{item.display_name.split(',').slice(1).join(',')}</span></span>
                                 </div>
@@ -206,7 +206,7 @@ export default function MapSelectorPage({ onClose, onConfirm, initialLat, initia
                         <div className={`w-2 h-2 rounded-full ${isGeocoding || isLocating ? 'bg-gray-300 animate-pulse' : 'bg-green-500'}`}></div>
                         {isLocating ? "Buscando GPS..." : (address || "Ubicando...")}
                     </div>
-                    <MapPin size={44} className={`drop-shadow-2xl fill-current transition-colors duration-300 ${isLocating ? 'text-gray-400' : 'text-purple-600'}`} />
+                    <MapPin size={44} className={`drop-shadow-2xl fill-current transition-colors duration-300 ${isLocating ? 'text-gray-400' : 'text-orange-600'}`} />
                     <div className="w-3 h-1.5 bg-black/20 rounded-[100%] blur-[2px]"></div>
                 </div>
 
@@ -214,11 +214,11 @@ export default function MapSelectorPage({ onClose, onConfirm, initialLat, initia
                 <button
                     onClick={locateMe}
                     disabled={isLocating}
-                    className={`absolute bottom-28 right-6 p-3 rounded-full shadow-xl text-gray-700 z-50 border border-gray-100 flex items-center justify-center transition-all bg-white ${isLocating ? 'scale-110 ring-4 ring-purple-100' : 'active:scale-95'}`}
+                    className={`absolute bottom-28 right-6 p-3 rounded-full shadow-xl text-gray-700 z-50 border border-gray-100 flex items-center justify-center transition-all bg-white ${isLocating ? 'scale-110 ring-4 ring-orange-100' : 'active:scale-95'}`}
                     style={{ backgroundColor: 'white', width: '50px', height: '50px' }}
                 >
                     {isLocating ? (
-                        <Loader2 size={24} className="animate-spin text-purple-600" />
+                        <Loader2 size={24} className="animate-spin text-orange-600" />
                     ) : (
                         <Crosshair size={24} />
                     )}
@@ -230,7 +230,7 @@ export default function MapSelectorPage({ onClose, onConfirm, initialLat, initia
                         onClick={confirmSelection}
                         disabled={isLocating || !address} // Se bloquea si carga o no hay dirección
                         className={`w-full text-white font-bold py-4 rounded-2xl shadow-2xl active:scale-95 flex justify-center items-center gap-2 border-2 border-white/20 transition-all duration-300
-                            ${isLocating ? 'bg-gray-400 cursor-not-allowed grayscale opacity-80 scale-100' : 'bg-purple-600 shadow-purple-500/40'}
+                            ${isLocating ? 'bg-gray-400 cursor-not-allowed grayscale opacity-80 scale-100' : 'bg-orange-600 shadow-orange-500/40'}
                         `}
                     >
                         {isLocating ? (
