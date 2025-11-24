@@ -62,9 +62,9 @@ const Notification = ({ type, message, onClose, isVisible }) => {
       icon: <AlertCircle className="w-5 h-5 text-orange-600" />
     },
     info: {
-      bg: 'bg-orange-50 border-orange-200',
-      text: 'text-orange-800',
-      icon: <Info className="w-5 h-5 text-orange-600" />
+      bg: 'bg-blue-50 border-blue-200',
+      text: 'text-blue-800',
+      icon: <Info className="w-5 h-5 text-blue-600" />
     }
   };
 
@@ -104,9 +104,9 @@ const ConfirmationModal = ({ isOpen, title, message, onConfirm, onCancel, confir
       button: 'bg-red-600 hover:bg-red-700'
     },
     info: {
-      bg: 'bg-orange-50',
-      icon: <Info className="w-6 h-6 text-orange-600" />,
-      button: 'bg-orange-600 hover:bg-orange-700'
+      bg: 'bg-blue-50',
+      icon: <Info className="w-6 h-6 text-blue-600" />,
+      button: 'bg-blue-600 hover:bg-blue-700'
     }
   };
 
@@ -283,6 +283,23 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onE
       };
       showNotification('success', statusMessages[newStatus]);
 
+      // Si el usuario selecciona "No iré", preguntar si quiere eliminar
+      if (newStatus === 'declined') {
+        setTimeout(() => {
+          showConfirmModal({
+            title: 'No asistirás',
+            message: 'Has indicado que no asistirás a este evento. ¿Quieres eliminarlo de tu lista?',
+            type: 'info',
+            confirmText: 'Eliminar',
+            onConfirm: () => {
+              showNotification('info', 'Evento eliminado de tu lista');
+              setTimeout(() => onBack(), 1000);
+              closeConfirmModal();
+            },
+            onCancel: closeConfirmModal
+          });
+        }, 1000);
+      }
 
     } catch (error) {
       console.error('Error al actualizar estado:', error);
@@ -314,7 +331,9 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onE
         });
         showNotification('success', `Invitación enviada a ${guest.name}`);
       } else {
-        showNotification('info', `${guest.name} no está registrado en la app`);
+        // No mostrar notificación si el contacto no está registrado - es normal
+        // Simplemente no hacemos nada o podríamos mostrar un mensaje más discreto
+        console.log(`${guest.name} no está registrado en la app`);
       }
     } catch (error) {
       console.error(error);
@@ -324,7 +343,7 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onE
     }
   };
 
-  // 🧡 NUEVO: agregar invitado usando el picker nativo de contactos
+  // 🧡 Agregar invitado usando el picker nativo de contactos
   const handleAddGuestFromContacts = async () => {
     try {
       const result = await Contacts.pickContact({
@@ -455,7 +474,7 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onE
                 event.attendees.map((guest, index) => {
                   const isMe = user.uid === guest.uid;
                   const needsInvitation =
-                    isCreator && guest.status !== 'confirmed';
+                    isCreator && !guest.uid && guest.status !== 'confirmed';
 
                   return (
                     <div
@@ -479,7 +498,7 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onE
                           <button
                             onClick={() => handleInvite(guest, index)}
                             disabled={invitingIndex === index}
-                            className="absolute -top-1 -right-1 w-7 h-7 bg-white dark:bg-slate-900 text-orange-500 rounded-full shadow-md flex items-center justify-center"
+                            className="absolute -top-1 -right-1 w-7 h-7 bg-white dark:bg-slate-900 text-orange-500 rounded-full shadow-md flex items-center justify-center hover:bg-orange-50 transition-colors"
                           >
                             {invitingIndex === index ? (
                               <span className="animate-spin h-3 w-3 border-2 border-orange-500 rounded-full border-t-transparent"></span>

@@ -77,7 +77,7 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
     <div className="flex flex-col w-full h-screen bg-gray-50 dark:bg-gray-900 font-sans relative overflow-hidden transition-colors">
       
       {/* --- HEADER --- */}
-      <div className="pt-12 pb-2 px-6 flex justify-between items-center shrink-0 z-20 relative">
+      <div className="pt-12 pb-2 px-6 flex justify-between items-center shrink-0 z-30 relative">
         <div className="flex-1 mr-4">
           {isSearchOpen ? (
             <div className="flex items-center bg-white dark:bg-gray-800 rounded-full px-4 py-3 animate-fade-in shadow-sm border border-gray-200 dark:border-gray-700">
@@ -131,7 +131,7 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
       </div>
 
       {/* --- FILTRO --- */}
-      <div className="px-6 mb-2 shrink-0 z-10">
+      <div className="px-6 mb-2 shrink-0 z-20 relative">
         <div className="relative inline-block w-full">
           <button 
             onClick={() => setIsFilterOpen(!isFilterOpen)}
@@ -148,7 +148,7 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
           </button>
 
           {isFilterOpen && (
-            <div className="absolute top-full left-0 w-full mt-2 bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden z-50 border border-gray-200 dark:border-gray-700 animate-slide-down">
+            <div className="absolute top-full left-0 w-full mt-2 bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden z-40 border border-gray-200 dark:border-gray-700 animate-slide-down">
               <button 
                 onClick={() => { setFilterType('upcoming'); setIsFilterOpen(false); }}
                 className={`w-full text-left px-5 py-3.5 text-sm font-medium flex items-center justify-between transition-colors ${
@@ -175,7 +175,7 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
       </div>
 
       {/* --- CARRUSEL DE EVENTOS --- */}
-      <div className="flex-1 w-full flex flex-col justify-center overflow-hidden relative">
+      <div className="flex-1 w-full flex flex-col justify-center overflow-hidden relative z-10">
         
         {filteredEvents.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center px-8 -mt-20">
@@ -311,7 +311,7 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
       {filterType === 'upcoming' && (
         <button 
           onClick={() => onNavigate('create')}
-          className="absolute bottom-6 right-6 w-14 h-14 bg-gray-900 dark:bg-gray-200 text-white dark:text-gray-900 rounded-full shadow-xl flex items-center justify-center z-30 active:scale-90 transition-transform border-4 border-gray-50 dark:border-gray-800"
+          className="fixed bottom-6 right-6 w-14 h-14 bg-gray-900 dark:bg-gray-200 text-white dark:text-gray-900 rounded-full shadow-xl flex items-center justify-center z-40 active:scale-90 transition-transform border-4 border-gray-50 dark:border-gray-800"
         >
           <span className="text-3xl font-light leading-none pb-1">+</span>
         </button>
@@ -321,7 +321,7 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
       {showNotifications && (
         <div className="fixed inset-0 z-50 flex justify-end animate-fade-in">
           <div className="absolute inset-0 bg-black/20 dark:bg-black/40 backdrop-blur-sm" onClick={() => setShowNotifications(false)}></div>
-          <div className="relative w-full max-w-xs bg-white dark:bg-gray-800 h-full shadow-2xl animate-slide-in-right flex flex-col border-l border-gray-200 dark:border-gray-700">
+          <div className="relative w-full max-w-xs bg-white dark:bg-gray-800 h-full shadow-2xl animate-slide-in-right flex flex-col border-l border-gray-200 dark:border-gray-700 z-50">
             <div className="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/20">
               <h2 className="font-bold text-lg text-gray-800 dark:text-gray-100">
                 Notificaciones
