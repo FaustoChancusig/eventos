@@ -7,7 +7,7 @@ export default function EventChat({ eventId, user, isConfirmed }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null); // Estado para mostrar errores
+  const [error, setError] = useState(null);
   
   const messagesEndRef = useRef(null);
 
@@ -15,7 +15,7 @@ export default function EventChat({ eventId, user, isConfirmed }) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // 1. Escuchar mensajes
+  // Listener mensajes
   useEffect(() => {
     if (!eventId) return;
 
@@ -29,8 +29,8 @@ export default function EventChat({ eventId, user, isConfirmed }) {
       orderBy('createdAt', 'asc')
     );
 
-    // Listener con manejo de errores
-    const unsubscribe = onSnapshot(q, 
+    const unsubscribe = onSnapshot(
+      q,
       (snapshot) => {
         const msgs = snapshot.docs.map(doc => ({
           id: doc.id,
@@ -38,11 +38,11 @@ export default function EventChat({ eventId, user, isConfirmed }) {
         }));
         setMessages(msgs);
         setLoading(false);
-        setTimeout(scrollToBottom, 100);
+        setTimeout(scrollToBottom, 80);
       },
       (err) => {
         console.error("Error cargando chat:", err);
-        setError("No se pudo cargar el chat. Verifica permisos o conexión.");
+        setError("No se pudo cargar el chat.");
         setLoading(false);
       }
     );
@@ -50,10 +50,10 @@ export default function EventChat({ eventId, user, isConfirmed }) {
     return () => unsubscribe();
   }, [eventId, isConfirmed]);
 
-  // 2. Enviar mensaje
+  // Enviar mensaje (sin duplicados)
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (newMessage.trim() === '') return;
+    if (!newMessage.trim()) return;
 
     try {
       await addDoc(collection(db, 'events', eventId, 'chat'), {
@@ -64,8 +64,8 @@ export default function EventChat({ eventId, user, isConfirmed }) {
       });
       setNewMessage('');
     } catch (error) {
-      console.error("Error enviando mensaje:", error);
-      alert("Error al enviar. Intenta de nuevo.");
+      console.error(error);
+      alert("Error al enviar mensaje.");
     }
   };
 
@@ -76,19 +76,24 @@ export default function EventChat({ eventId, user, isConfirmed }) {
           <Lock size={40} className="text-gray-400 dark:text-gray-300" />
         </div>
         <h3 className="text-lg font-bold text-gray-700 dark:text-gray-100">Chat bloqueado</h3>
-        <p className="text-sm mt-2 max-w-xs text-gray-500 dark:text-gray-400">Debes confirmar tu asistencia para poder usar el chat.</p>
+        <p className="text-sm mt-2 max-w-xs text-gray-500 dark:text-gray-400">
+          Debes confirmar tu asistencia para usar el chat.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-320px)] bg-surface-50 dark:bg-gray-900">
-      {/* Lista de Mensajes */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
+    <div className="flex flex-col h-[calc(100vh-320px)] bg-white dark:bg-gray-900">
+
+      {/* LISTA MENSAJES */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 dark:bg-gray-900">
         {loading ? (
           <p className="text-center text-xs text-gray-400 mt-4">Cargando chat...</p>
         ) : error ? (
-           <div className="text-center text-red-500 text-sm mt-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg">{error}</div>
+          <div className="text-center text-red-500 text-sm mt-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg">
+            {error}
+          </div>
         ) : messages.length === 0 ? (
           <div className="text-center text-gray-400 mt-10 flex flex-col items-center animate-fade-in">
             <MessageCircle size={34} className="mb-2 opacity-50" />
@@ -97,30 +102,51 @@ export default function EventChat({ eventId, user, isConfirmed }) {
         ) : (
           messages.map((msg) => {
             const isMe = msg.senderId === user.uid;
+
             return (
               <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow-sm ${
-                  isMe 
-                    ? "bg-purple-600 text-white rounded-tr-sm"
-                    : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-tl-sm"
-                }`}>
-                  {!isMe && <p className="text-[10px] font-bold text-purple-600 dark:text-purple-300 mb-0.5">{msg.senderName}</p>}
+                
+                <div className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow-sm transition 
+                  ${isMe
+                    ? "bg-orange-600 text-white rounded-tr-sm"
+                    : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100 rounded-tl-sm"
+                  }`}
+                >
+                  
+                  {/* Nombre del remitente */}
+                  {!isMe && (
+                    <p className="text-[10px] font-bold text-orange-600 dark:text-orange-300 mb-1">
+                      {msg.senderName}
+                    </p>
+                  )}
+
+                  {/* Texto del mensaje (sin duplicados) */}
                   <p>{msg.text}</p>
-                  <p>{msg.text}</p>
-                  <p className={`text-[9px] mt-1 text-right ${isMe ? "text-purple-200" : "text-gray-400 dark:text-gray-500"}`}>
-                    {msg.createdAt?.seconds 
-                      ? new Date(msg.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                      : ''}
+
+                  {/* Hora */}
+                  <p
+                    className={`text-[9px] mt-1 text-right ${
+                      isMe ? "text-orange-200" : "text-gray-400 dark:text-gray-500"
+                    }`}
+                  >
+                    {msg.createdAt?.seconds
+                      ? new Date(msg.createdAt.seconds * 1000).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit"
+                        })
+                      : ""}
                   </p>
+
                 </div>
               </div>
             );
           })
         )}
+
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
+      {/* INPUT MENSAJE */}
       <div className="p-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 pb-20 md:pb-3">
         <form onSubmit={handleSendMessage} className="flex gap-2">
           <input
@@ -128,17 +154,30 @@ export default function EventChat({ eventId, user, isConfirmed }) {
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Escribe un mensaje..."
-            className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-full px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-purple-300 dark:focus:ring-purple-700 transition"
+            className="
+              flex-1 bg-gray-100 dark:bg-gray-700 
+              text-gray-900 dark:text-gray-100 
+              rounded-full px-4 py-3 text-sm outline-none
+              focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-600
+            "
           />
-          <button 
-            type="submit" 
+
+          <button
+            type="submit"
             disabled={!newMessage.trim()}
-            className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-800 text-white p-3 rounded-full shadow active:scale-95 transition disabled:opacity-40"
+            className="
+              bg-orange-600 hover:bg-orange-700
+              dark:bg-orange-700 dark:hover:bg-orange-800
+              text-white p-3 rounded-full shadow 
+              active:scale-95 transition
+              disabled:opacity-40
+            "
           >
             <Send size={18} />
           </button>
         </form>
       </div>
+
     </div>
   );
 }

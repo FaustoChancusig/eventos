@@ -213,12 +213,7 @@ export default function AuthPage() {
 
       {/* Branding */}
       <div className="text-center mb-8 animate-fade-in-down">
-        <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-black/20 border border-white/20 mb-3 backdrop-blur-md">
-          <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
-          <span className="text-xs font-semibold text-orange-100 uppercase tracking-[0.2em]">
-            Comunidad Privada
-          </span>
-        </div>
+        
         <h1 className="text-4xl font-extrabold text-white tracking-tight drop-shadow-md">
           EventHub
         </h1>

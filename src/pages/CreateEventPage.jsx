@@ -48,11 +48,16 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
   // 🟠 Bottom sheet de fecha/hora
   const [showDateTimeSheet, setShowDateTimeSheet] = useState(false);
 
+  const [hour, setHour] = useState("12");
+  const [minute, setMinute] = useState("00");
+
   const [formData, setFormData] = useState({
     name: '',
     type: 'Fiesta',
     date: '',
     time: '',
+    hour: '12',
+    minute: '00',
     description: '',
     locationName: '',
     lat: null,
@@ -72,6 +77,12 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
         lat: eventToEdit.lat || null,
         lng: eventToEdit.lng || null
       });
+
+      if (eventToEdit.time) {
+        const [h, m] = eventToEdit.time.split(":");
+        setHour(h ?? "12");
+        setMinute(m ?? "00");
+      }
 
       // Si el evento ya tiene background, lo usamos
       if (eventToEdit.background) {
@@ -177,7 +188,7 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
      ============================================================ */
 
   const resizeImageFile = async (file, maxWidth = 1280, maxHeight = 1280, quality = 0.8) => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       try {
         const img = new Image();
         const objectUrl = URL.createObjectURL(file);
@@ -322,7 +333,11 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
         finalBackground = { type: 'image', value: url };
       }
 
-      const eventData = { ...formData, background: finalBackground };
+      const eventData = {
+        ...formData,
+        time: `${hour}:${minute}`,
+        background: finalBackground
+      };
 
       if (isEditing) {
         const eventRef = doc(db, 'events', eventToEdit.id);
@@ -400,12 +415,14 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
   };
 
   const formatTimeLabel = () => {
-    if (!formData.time) return 'Elegir hora';
-    return formData.time.substring(0, 5);
+    if (!hour || !minute) return 'Elegir hora';
+    return `${hour}:${minute}`;
   };
 
-  const todayStr = new Date().toISOString().split("T")[0];
-  const minTimeToday = new Date().toTimeString().slice(0, 5);
+  const today = new Date();
+const todayStr = today.toLocaleDateString("en-CA"); // formato YYYY-MM-DD
+
+  const minTimeToday = new Date().toTimeString().slice(0, 5); // HH:MM actual
 
 
   /* ============================================================
@@ -449,7 +466,7 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
             {/* === Detalles === */}
             <div className="space-y-3">
               <h3 className="text-xs font-bold text-ink/40 dark:text-slate-400 uppercase tracking-wider">Detalles</h3>
-              
+
               {/* NOMBRE */}
               <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-surface-200 dark:border-slate-800 flex items-center gap-3">
                 <Type className="text-primary-600" size={20} />
@@ -467,13 +484,13 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
 
               {nameError && (
                 <p className="text-danger dark:text-red-300 bg-dangerBg dark:bg-red-950 border border-danger/40 dark:border-red-700 p-2 rounded-lg text-sm flex items-center gap-2 animate-fade-in">
-                  <AlertCircle size={16}/> {nameError}
+                  <AlertCircle size={16} /> {nameError}
                 </p>
               )}
 
               {/* === Etiquetas === */}
               <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-surface-200 dark:border-slate-800">
-                
+
                 <div className="flex justify-between items-center mb-3">
                   <label className="text-xs text-ink/40 dark:text-slate-400 font-bold uppercase">Categoría</label>
 
@@ -557,7 +574,7 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
 
               {(dateError || timeError) && (
                 <p className="text-danger dark:text-red-300 bg-dangerBg dark:bg-red-950 border border-danger/40 dark:border-red-700 p-2 rounded-lg text-sm flex items-center gap-2 animate-fade-in">
-                  <AlertCircle size={16}/> {dateError || timeError}
+                  <AlertCircle size={16} /> {dateError || timeError}
                 </p>
               )}
 
@@ -604,7 +621,7 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
 
               {locationError && (
                 <p className="text-danger dark:text-red-300 bg-dangerBg dark:bg-red-950 border border-danger/40 dark:border-red-700 p-2 rounded-lg text-sm flex items-center gap-2 animate-fade-in">
-                  <AlertCircle size={16}/> {locationError}
+                  <AlertCircle size={16} /> {locationError}
                 </p>
               )}
 
@@ -741,29 +758,95 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
                     />
                   </div>
 
-                  {/* HORA */}
+                  {/* HORA - SCROLL CON BLOQUEO HOY */}
                   <div className="bg-surface-50 dark:bg-slate-900/70 p-3 rounded-2xl border border-surface-200 dark:border-slate-700">
                     <div className="flex items-center gap-2 mb-2 text-primary-700">
                       <Clock size={18} />
                       <span className="text-xs font-bold uppercase">HORA</span>
                     </div>
 
-                    <input
-                      type="time"
-                      name="time"
-                      value={formData.time}
-                      disabled={!formData.date}
-                      min={
-                        formData.date === todayStr
-                          ? minTimeToday
-                          : undefined
-                      }
-                      onChange={(e) => {
-                        setFormData({ ...formData, time: e.target.value });
-                        if (timeError) setTimeError(null);
-                      }}
-                      className="w-full outline-none text-ink dark:text-slate-100 bg-transparent text-sm"
-                    />
+                    <div className="flex items-center gap-3 justify-center">
+                      {/* HORAS */}
+                      <div className="flex-1">
+                        <div className="text-[10px] uppercase font-semibold text-ink/50 dark:text-slate-400 mb-1 text-center">
+                          Horas
+                        </div>
+                        <div className="h-40 overflow-y-auto rounded-2xl bg-surface-100 dark:bg-slate-800 border border-surface-200 dark:border-slate-700 py-1">
+                          {Array.from({ length: 24 }).map((_, i) => {
+                            const value = String(i).padStart(2, '0');
+                            const isActive = value === hour;
+                            const currentHour = minTimeToday.split(':')[0];
+                            const disabledToday =
+                              formData.date === todayStr && value < currentHour;
+
+                            return (
+                              <button
+                                key={value}
+                                type="button"
+                                disabled={disabledToday}
+                                onClick={() => {
+                                  if (disabledToday) return;
+                                  setHour(value);
+                                  setFormData(prev => ({ ...prev, time: `${value}:${minute}` }));
+                                  if (timeError) setTimeError(null);
+                                }}
+                                className={`
+                                  w-full py-2 text-sm font-semibold flex items-center justify-center
+                                  transition
+                                  ${isActive
+                                    ? 'bg-primary-500 text-white'
+                                    : 'text-ink/70 dark:text-slate-200 hover:bg-surface-200 dark:hover:bg-slate-700'}
+                                  ${disabledToday ? 'opacity-30 cursor-not-allowed hover:bg-transparent' : ''}
+                                `}
+                              >
+                                {value}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <span className="font-bold text-ink/80 dark:text-slate-200 text-lg">:</span>
+
+                      {/* MINUTOS */}
+                      <div className="flex-1">
+                        <div className="text-[10px] uppercase font-semibold text-ink/50 dark:text-slate-400 mb-1 text-center">
+                          Minutos
+                        </div>
+                        <div className="h-40 overflow-y-auto rounded-2xl bg-surface-100 dark:bg-slate-800 border border-surface-200 dark:border-slate-700 py-1">
+                          {Array.from({ length: 60 }).map((_, i) => {
+                            const m = String(i).padStart(2, '0');
+                            const isActive = m === minute;
+                            const disabledToday =
+                              formData.date === todayStr &&
+                              `${hour}:${m}` < minTimeToday;
+
+                            return (
+                              <button
+                                key={m}
+                                type="button"
+                                disabled={disabledToday}
+                                onClick={() => {
+                                  if (disabledToday) return;
+                                  setMinute(m);
+                                  setFormData(prev => ({ ...prev, time: `${hour}:${m}` }));
+                                  if (timeError) setTimeError(null);
+                                }}
+                                className={`
+                                  w-full py-2 text-sm font-semibold flex items-center justify-center transition
+                                  ${isActive
+                                    ? 'bg-primary-500 text-white'
+                                    : 'text-ink/70 dark:text-slate-200 hover:bg-surface-200 dark:hover:bg-slate-700'}
+                                  ${disabledToday ? 'opacity-30 cursor-not-allowed hover:bg-transparent' : ''}
+                                `}
+                              >
+                                {m}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 

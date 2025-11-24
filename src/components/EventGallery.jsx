@@ -104,8 +104,9 @@ export default function EventGallery({ eventId, user, isConfirmed }) {
 
       {/* --- BOTÓN DE SUBIDA --- */}
       <label className={`w-full py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-3 cursor-pointer 
-        ${isConfirmed && !loading ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-lg' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
-      >
+  ${isConfirmed && !loading ? 'bg-orange-600 hover:bg-orange-700 text-white shadow-lg' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
+>
+
         {loading ? (
           <>
             <span className="animate-spin h-5 w-5 border-2 border-white rounded-full border-t-transparent"></span>
