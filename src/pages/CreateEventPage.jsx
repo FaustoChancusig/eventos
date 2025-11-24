@@ -84,7 +84,6 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
         setMinute(m ?? "00");
       }
 
-      // Si el evento ya tiene background, lo usamos
       if (eventToEdit.background) {
         setBackgroundConfig({
           type: eventToEdit.background.type || 'gradient',
@@ -297,7 +296,7 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
 
 
   /* ============================================================
-     PUBLICAR EVENTO
+      PUBLICAR EVENTO
      ============================================================ */
 
   const handlePublish = async () => {
@@ -420,14 +419,14 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
   };
 
   const today = new Date();
-const todayStr = today.toLocaleDateString("en-CA"); // formato YYYY-MM-DD
+  const todayStr = today.toLocaleDateString("en-CA"); // formato YYYY-MM-DD
 
   const minTimeToday = new Date().toTimeString().slice(0, 5); // HH:MM actual
 
 
   /* ============================================================
-     ======================= RENDER ==============================
-     ============================================================ */
+      ======================= RENDER ==============================
+      ============================================================ */
 
   return (
     <>
@@ -489,16 +488,17 @@ const todayStr = today.toLocaleDateString("en-CA"); // formato YYYY-MM-DD
               )}
 
               {/* === Etiquetas === */}
-              <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-surface-200 dark:border-slate-800">
+              {/* FIX: Se agregó flex-wrap y w-full para evitar overflow horizontal */}
+              <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-surface-200 dark:border-slate-800 w-full">
 
-                <div className="flex justify-between items-center mb-3">
-                  <label className="text-xs text-ink/40 dark:text-slate-400 font-bold uppercase">Categoría</label>
+                <div className="flex flex-wrap justify-between items-center mb-3 gap-2">
+                  <label className="text-xs text-ink/40 dark:text-slate-400 font-bold uppercase shrink-0">Categoría</label>
 
                   {!isAddingTag ? (
                     <button
                       type="button"
                       onClick={() => setIsAddingTag(true)}
-                      className="text-xs text-primary-700 font-bold flex items-center gap-1 bg-primary-100 px-2 py-1 rounded hover:bg-primary-200 transition active:scale-95"
+                      className="text-xs text-primary-700 font-bold flex items-center gap-1 bg-primary-100 px-2 py-1 rounded hover:bg-primary-200 transition active:scale-95 shrink-0"
                     >
                       <Plus size={14} /> Nueva
                     </button>
@@ -510,19 +510,19 @@ const todayStr = today.toLocaleDateString("en-CA"); // formato YYYY-MM-DD
                         value={newTag}
                         onChange={(e) => setNewTag(e.target.value)}
                         placeholder="Nueva..."
-                        className="flex-1 bg-surface-100 dark:bg-slate-800 border border-primary-300 rounded-lg px-2 py-1 text-sm outline-none focus:border-primary-500 text-ink dark:text-slate-100 placeholder-ink/40 dark:placeholder-slate-500"
+                        className="flex-1 bg-surface-100 dark:bg-slate-800 border border-primary-300 rounded-lg px-2 py-1 text-sm outline-none focus:border-primary-500 text-ink dark:text-slate-100 placeholder-ink/40 dark:placeholder-slate-500 min-w-0"
                       />
-                      <button type="button" onClick={handleAddTag} className="text-green-600 bg-green-50 dark:bg-green-950 p-1 rounded active:scale-95">
+                      <button type="button" onClick={handleAddTag} className="text-green-600 bg-green-50 dark:bg-green-950 p-1 rounded active:scale-95 shrink-0">
                         <Check size={16} />
                       </button>
-                      <button type="button" onClick={() => setIsAddingTag(false)} className="text-danger dark:text-red-300 bg-dangerBg dark:bg-red-950 p-1 rounded active:scale-95">
+                      <button type="button" onClick={() => setIsAddingTag(false)} className="text-danger dark:text-red-300 bg-dangerBg dark:bg-red-950 p-1 rounded active:scale-95 shrink-0">
                         <X size={16} />
                       </button>
                     </div>
                   )}
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 w-full">
                   {defaultTags.map(tag => (
                     <button
                       key={tag}
@@ -540,12 +540,12 @@ const todayStr = today.toLocaleDateString("en-CA"); // formato YYYY-MM-DD
                   ))}
 
                   {customTags.map(tag => (
-                    <div key={tag.id} className="relative group inline-flex">
+                    <div key={tag.id} className="relative group inline-flex max-w-full">
                       <button
                         type="button"
                         onClick={() => setEventType(tag.name)}
                         className={`
-                          px-4 py-2 rounded-full text-sm font-bold pr-9 border transition-all whitespace-nowrap active:scale-95
+                          px-4 py-2 rounded-full text-sm font-bold pr-9 border transition-all whitespace-nowrap active:scale-95 truncate max-w-full
                           ${formData.type === tag.name
                             ? 'bg-primary-100 text-primary-800 border-primary-300 shadow-sm'
                             : 'bg-white dark:bg-slate-900 text-ink/60 dark:text-slate-300 border-surface-300 dark:border-slate-700 border-dashed'}
