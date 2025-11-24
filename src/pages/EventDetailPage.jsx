@@ -29,7 +29,10 @@ import {
   Edit,
   Image,
   MessageCircle,
-  AlertCircle
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  Info
 } from 'lucide-react';
 
 // 📱 Plugin de contactos (Capacitor)
@@ -38,6 +41,108 @@ import { Contacts } from '@capacitor-community/contacts';
 import EventGallery from '../components/EventGallery';
 import EventChat from '../components/EventChat';
 
+// Componente de notificación profesional
+const Notification = ({ type, message, onClose, isVisible }) => {
+  if (!isVisible) return null;
+
+  const config = {
+    success: {
+      bg: 'bg-green-50 border-green-200',
+      text: 'text-green-800',
+      icon: <CheckCircle className="w-5 h-5 text-green-600" />
+    },
+    error: {
+      bg: 'bg-red-50 border-red-200',
+      text: 'text-red-800',
+      icon: <XCircle className="w-5 h-5 text-red-600" />
+    },
+    warning: {
+      bg: 'bg-orange-50 border-orange-200',
+      text: 'text-orange-800',
+      icon: <AlertCircle className="w-5 h-5 text-orange-600" />
+    },
+    info: {
+      bg: 'bg-orange-50 border-orange-200',
+      text: 'text-orange-800',
+      icon: <Info className="w-5 h-5 text-orange-600" />
+    }
+  };
+
+  const { bg, text, icon } = config[type] || config.info;
+
+  return (
+    <div className="fixed top-4 right-4 z-50 animate-slide-in-right">
+      <div className={`${bg} border ${text} px-4 py-3 rounded-xl shadow-lg max-w-sm flex items-start gap-3`}>
+        {icon}
+        <div className="flex-1">
+          <p className="text-sm font-medium">{message}</p>
+        </div>
+        <button
+          onClick={onClose}
+          className="text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Componente de confirmación profesional
+const ConfirmationModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Confirmar", cancelText = "Cancelar", type = "warning" }) => {
+  if (!isOpen) return null;
+
+  const config = {
+    warning: {
+      bg: 'bg-orange-50',
+      icon: <AlertCircle className="w-6 h-6 text-orange-600" />,
+      button: 'bg-orange-600 hover:bg-orange-700'
+    },
+    danger: {
+      bg: 'bg-red-50',
+      icon: <AlertCircle className="w-6 h-6 text-red-600" />,
+      button: 'bg-red-600 hover:bg-red-700'
+    },
+    info: {
+      bg: 'bg-orange-50',
+      icon: <Info className="w-6 h-6 text-orange-600" />,
+      button: 'bg-orange-600 hover:bg-orange-700'
+    }
+  };
+
+  const { bg, icon, button } = config[type];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-md w-full mx-4">
+        <div className={`${bg} p-6 rounded-t-2xl flex items-center gap-3`}>
+          {icon}
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
+        </div>
+        
+        <div className="p-6">
+          <p className="text-gray-600 dark:text-gray-300">{message}</p>
+        </div>
+        
+        <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-slate-700">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-3 px-4 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+          >
+            {cancelText}
+          </button>
+          <button
+            onClick={onConfirm}
+            className={`flex-1 py-3 px-4 ${button} text-white rounded-xl font-medium transition-colors`}
+          >
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function EventDetailPage({ event: initialEvent, user, onBack, onEdit, onEventUpdate }) {
   const [invitingIndex, setInvitingIndex] = useState(null);
   const [currentTab, setCurrentTab] = useState('info');
@@ -45,6 +150,10 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onE
   const [event, setEvent] = useState(initialEvent);
   const [currentStatus, setCurrentStatus] = useState('pending');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  
+  // Estados para notificaciones y modales
+  const [notification, setNotification] = useState({ isVisible: false, type: '', message: '' });
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, config: {} });
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -77,8 +186,23 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onE
 
   const isConfirmed = currentStatus === 'confirmed';
 
-  // (Reservado para un posible modal manual de invitados)
-  const [showAddGuest, setShowAddGuest] = useState(false);
+  // Mostrar notificación
+  const showNotification = (type, message, duration = 4000) => {
+    setNotification({ isVisible: true, type, message });
+    setTimeout(() => {
+      setNotification({ isVisible: false, type: '', message: '' });
+    }, duration);
+  };
+
+  // Mostrar modal de confirmación
+  const showConfirmModal = (config) => {
+    setConfirmModal({ isOpen: true, config });
+  };
+
+  // Cerrar modal de confirmación
+  const closeConfirmModal = () => {
+    setConfirmModal({ isOpen: false, config: {} });
+  };
 
   // --- ABRIR GOOGLE MAPS EXTERNO ---
   const handleOpenMap = () => {
@@ -94,13 +218,24 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onE
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('¿Eliminar este evento?')) return;
-    try {
-      await deleteDoc(doc(db, 'events', event.id));
-      onBack();
-    } catch (error) {
-      alert('Error al borrar.');
-    }
+    showConfirmModal({
+      title: 'Eliminar evento',
+      message: '¿Estás seguro de que quieres eliminar este evento? Esta acción no se puede deshacer.',
+      type: 'danger',
+      confirmText: 'Eliminar',
+      onConfirm: async () => {
+        try {
+          await deleteDoc(doc(db, 'events', event.id));
+          showNotification('success', 'Evento eliminado correctamente');
+          setTimeout(() => onBack(), 1000);
+        } catch (error) {
+          showNotification('error', 'Error al eliminar el evento');
+        } finally {
+          closeConfirmModal();
+        }
+      },
+      onCancel: closeConfirmModal
+    });
   };
 
   const handleChangeStatus = async (newStatus) => {
@@ -140,20 +275,20 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onE
       };
       setEvent(updatedEvent);
 
-      // Si el usuario selecciona "No iré", preguntar si quiere eliminar
-      if (newStatus === 'declined') {
-        setTimeout(() => {
-          if (window.confirm('Has indicado que no asistirás. ¿Quieres eliminar este evento de tu lista?')) {
-            onBack();
-          }
-        }, 500);
-      }
+      // Mostrar notificación de éxito
+      const statusMessages = {
+        confirmed: '¡Confirmado! Nos alegra que asistas al evento',
+        maybe: 'Estado actualizado a "Tal vez"',
+        declined: 'Has indicado que no asistirás al evento'
+      };
+      showNotification('success', statusMessages[newStatus]);
+
 
     } catch (error) {
       console.error('Error al actualizar estado:', error);
       // Revertir el estado local si hay error
       setCurrentStatus(currentStatus);
-      alert('Error al actualizar tu asistencia.');
+      showNotification('error', 'Error al actualizar tu asistencia');
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -177,10 +312,13 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onE
           status: 'pending',
           createdAt: serverTimestamp()
         });
-        alert(`Invitación enviada.`);
+        showNotification('success', `Invitación enviada a ${guest.name}`);
+      } else {
+        showNotification('info', `${guest.name} no está registrado en la app`);
       }
     } catch (error) {
       console.error(error);
+      showNotification('error', 'Error al enviar la invitación');
     } finally {
       setInvitingIndex(null);
     }
@@ -206,7 +344,7 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onE
       const phoneNumber = contact.phones?.[0]?.number;
 
       if (!phoneNumber) {
-        alert('Este contacto no tiene número telefónico.');
+        showNotification('warning', 'Este contacto no tiene número telefónico');
         return;
       }
 
@@ -219,7 +357,7 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onE
       });
 
       if (alreadyExists) {
-        alert('Este contacto ya está agregado como invitado.');
+        showNotification('warning', 'Este contacto ya está en la lista de invitados');
         return;
       }
 
@@ -244,12 +382,11 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onE
         attendees: [...currentAttendees, newGuest]
       });
 
-      alert(`Se agregó a ${displayName} como invitado.`);
+      showNotification('success', `${displayName} agregado como invitado`);
+
     } catch (error) {
       console.error('Error al seleccionar contacto', error);
-      alert(
-        'No se pudo abrir la libreta de contactos. Asegúrate de dar permisos en el dispositivo.'
-      );
+      showNotification('error', 'No se pudo acceder a los contactos. Verifica los permisos de la aplicación.');
     }
   };
 
@@ -705,6 +842,26 @@ export default function EventDetailPage({ event: initialEvent, user, onBack, onE
       >
         {renderContent()}
       </div>
+
+      {/* NOTIFICACIONES PROFESIONALES */}
+      <Notification
+        type={notification.type}
+        message={notification.message}
+        isVisible={notification.isVisible}
+        onClose={() => setNotification({ isVisible: false, type: '', message: '' })}
+      />
+
+      {/* MODAL DE CONFIRMACIÓN PROFESIONAL */}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.config.title}
+        message={confirmModal.config.message}
+        type={confirmModal.config.type}
+        confirmText={confirmModal.config.confirmText}
+        cancelText={confirmModal.config.cancelText}
+        onConfirm={confirmModal.config.onConfirm}
+        onCancel={confirmModal.config.onCancel}
+      />
     </div>
   );
-} 
+}
