@@ -31,6 +31,9 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+// 📱 Plugin de contactos (Capacitor)
+import { Contacts } from '@capacitor-community/contacts';
+
 import EventGallery from '../components/EventGallery';
 import EventChat from '../components/EventChat';
 
@@ -39,7 +42,9 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
   const [currentTab, setCurrentTab] = useState('info');
 
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const isCreator = user?.uid === event.creatorId;
 
@@ -60,23 +65,18 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
   const currentStatus = myAttendance?.status || 'pending';
   const isConfirmed = currentStatus === 'confirmed';
 
-  // --- Estados para agregar invitado ---
-  const [showAddGuest, setShowAddGuest] = useState(false);
-  // (Estos estados no se usaban en tu código original completo, pero los dejo por si acaso los implementas luego)
-  // const [guestName, setGuestName] = useState('');
-  // const [guestPhone, setGuestPhone] = useState('');
-  // const [savingGuest, setSavingGuest] = useState(false);
+  // --- Estados para agregar invitado (los dejamos por si luego quieres un modal manual) ---
+  const [showAddGuest, setShowAddGuest] = useState(false); // ahora no se usa directamente
 
   // --- ABRIR GOOGLE MAPS EXTERNO ---
   const handleOpenMap = () => {
-    // Verificamos si existen latitud y longitud guardadas
     if (event.lat && event.lng) {
-      // URL oficial para búsqueda por coordenadas
       const url = `https://www.google.com/maps/search/?api=1&query=${event.lat},${event.lng}`;
       window.open(url, '_blank');
     } else if (event.locationName) {
-      // Fallback: Si no hay coordenadas, buscamos por el nombre del lugar
-      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.locationName)}`;
+      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+        event.locationName
+      )}`;
       window.open(url, '_blank');
     }
   };
@@ -113,7 +113,6 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
       await updateDoc(eventRef, {
         attendees: [...otherAttendees, myNewEntry]
       });
-
     } catch (error) {
       alert('Error al actualizar.');
     }
@@ -146,6 +145,66 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
     }
   };
 
+  // 🧡 NUEVO: agregar invitado usando el picker nativo de contactos
+  const handleAddGuestFromContacts = async () => {
+    try {
+      // Abrimos el picker nativo
+      const result = await Contacts.pickContact({
+        projection: {
+          name: true,
+          phones: true
+        }
+      });
+
+      const contact = result?.contact;
+      if (!contact) {
+        return; // usuario canceló
+      }
+
+      const displayName =
+        contact.name?.display || contact.name?.given || 'Invitado';
+      const phoneNumber = contact.phones?.[0]?.number;
+
+      if (!phoneNumber) {
+        alert('Este contacto no tiene número telefónico.');
+        return;
+      }
+
+      const normalizedPhone = phoneNumber.replace(/[^0-9]/g, '');
+
+      const currentAttendees = event.attendees || [];
+      const alreadyExists = currentAttendees.some(a => {
+        const guestPhone = (a.phone || '').replace(/[^0-9]/g, '');
+        return guestPhone && guestPhone === normalizedPhone;
+      });
+
+      if (alreadyExists) {
+        alert('Este contacto ya está agregado como invitado.');
+        return;
+      }
+
+      const eventRef = doc(db, 'events', event.id);
+
+      await updateDoc(eventRef, {
+        attendees: arrayUnion({
+          uid: null, // todavía no es usuario registrado en la app
+          name: displayName,
+          phone: normalizedPhone,
+          status: 'pending',
+          addedBy: user.uid,
+          addedAt: new Date().toISOString()
+        })
+      });
+
+      alert(`Se agregó a ${displayName} como invitado.`);
+    } catch (error) {
+      console.error('Error al seleccionar contacto', error);
+      alert(
+        'No se pudo abrir la libreta de contactos. Asegúrate de dar permisos en el dispositivo.'
+      );
+    }
+  };
+
   const headerBgClass =
     event.background?.type === 'gradient'
       ? `bg-gradient-to-br ${event.background.value}`
@@ -170,27 +229,30 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
     if (currentTab === 'info') {
       return (
         <div className="p-6 space-y-6 text-ink dark:text-slate-100">
-        
           {/* INVITADOS */}
           <div className="mb-2">
             <div className="flex items-center justify-between mb-3 px-1">
-              <h3 className={`font-bold text-sm uppercase tracking-wider ${themeAccentColor}`}>
+              <h3
+                className={`font-bold text-sm uppercase tracking-wider ${themeAccentColor}`}
+              >
                 Invitados
               </h3>
               {isCreator && (
                 <button
-                  onClick={() => setShowAddGuest(true)}
-                  className="flex items-center justify-center gap-1 
-                             w-12 h-12 bg-orange-100 text-orange-600 
-                             border border-orange-300 rounded-xl
-                             shadow-sm hover:bg-orange-200 
-                             active:scale-95 transition-all"
+                  onClick={handleAddGuestFromContacts}
+                  className="w-14 h-14 bg-orange-100 border border-orange-300
+                             rounded-2xl shadow-md flex items-center justify-center
+                             hover:bg-orange-200 active:scale-95 transition-all"
                 >
-                  <Users size={18} className="text-orange-600" />
-                  <span className="text-xl font-bold text-orange-600">+</span>
+                  <Users size={20} className="text-orange-600" />
+                  <span className="text-orange-600 font-bold text-2xl -ml-1">
+                    +
+                  </span>
                 </button>
               )}
-              <span className={`${themeBgColor} ${themeAccentColor} px-2.5 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 border ${themeBorderColor}`}>
+              <span
+                className={`${themeBgColor} ${themeAccentColor} px-2.5 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 border ${themeBorderColor}`}
+              >
                 <Users size={12} /> {event.attendees?.length || 0}
               </span>
             </div>
@@ -199,10 +261,14 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
               {event.attendees?.length > 0 ? (
                 event.attendees.map((guest, index) => {
                   const isMe = user.uid === guest.uid;
-                  const needsInvitation = isCreator && guest.status !== 'confirmed';
+                  const needsInvitation =
+                    isCreator && guest.status !== 'confirmed';
 
                   return (
-                    <div key={index} className="flex flex-col items-center shrink-0">
+                    <div
+                      key={index}
+                      className="flex flex-col items-center shrink-0"
+                    >
                       <div
                         className={`relative w-16 h-16 p-0.5 rounded-full border-2 ${
                           guest.status === 'confirmed'
@@ -231,7 +297,13 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
                         )}
                       </div>
 
-                      <span className={`text-xs mt-2 font-medium ${isMe ? themeAccentColor : 'text-gray-600 dark:text-gray-400'}`}>
+                      <span
+                        className={`text-xs mt-2 font-medium ${
+                          isMe
+                            ? themeAccentColor
+                            : 'text-gray-600 dark:text-gray-400'
+                        }`}
+                      >
                         {isMe ? 'Tú' : guest.name.split(' ')[0]}
                       </span>
                     </div>
@@ -247,9 +319,10 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
 
           {/* FECHA Y HORA */}
           <div className="grid grid-cols-2 gap-4">
-
             <div className="bg-white dark:bg-slate-900 p-5 rounded-[2rem] shadow-sm flex items-start gap-4 border border-gray-50 dark:border-slate-800">
-              <div className={`p-3 rounded-2xl ${themeBgColor} ${themeAccentColor}`}>
+              <div
+                className={`p-3 rounded-2xl ${themeBgColor} ${themeAccentColor}`}
+              >
                 <Calendar size={24} />
               </div>
               <div>
@@ -257,12 +330,17 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
                   Fecha
                 </h4>
                 <p className="font-bold text-gray-800 dark:text-white text-lg leading-tight">
-                  {new Date(event.date + 'T00:00:00').toLocaleDateString('es-ES', {
-                    day: 'numeric', month: 'short'
+                  {new Date(
+                    event.date + 'T00:00:00'
+                  ).toLocaleDateString('es-ES', {
+                    day: 'numeric',
+                    month: 'short'
                   })}
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {new Date(event.date + 'T00:00:00').toLocaleDateString('es-ES', {
+                  {new Date(
+                    event.date + 'T00:00:00'
+                  ).toLocaleDateString('es-ES', {
                     weekday: 'long'
                   })}
                 </p>
@@ -270,7 +348,9 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
             </div>
 
             <div className="bg-white dark:bg-slate-900 p-5 rounded-[2rem] shadow-sm flex items-start gap-4 border border-gray-50 dark:border-slate-800">
-              <div className={`p-3 rounded-2xl ${themeBgColor} ${themeAccentColor}`}>
+              <div
+                className={`p-3 rounded-2xl ${themeBgColor} ${themeAccentColor}`}
+              >
                 <Clock size={24} />
               </div>
               <div>
@@ -282,16 +362,17 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
                 </p>
               </div>
             </div>
-
           </div>
 
           {/* UBICACIÓN - CLICK PARA ABRIR MAPA */}
-          <button 
+          <button
             onClick={handleOpenMap}
             className="w-full text-left bg-white dark:bg-slate-900 p-4 rounded-[2.5rem] shadow-sm border border-gray-50 dark:border-slate-800 active:scale-95 transition-transform group hover:border-orange-200"
           >
             <div className="flex items-center gap-3">
-              <div className={`p-3 rounded-full ${themeBgColor} ${themeAccentColor} group-hover:bg-orange-100 transition-colors`}>
+              <div
+                className={`p-3 rounded-full ${themeBgColor} ${themeAccentColor} group-hover:bg-orange-100 transition-colors`}
+              >
                 <MapPin size={24} />
               </div>
               <div className="flex-1">
@@ -303,7 +384,7 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
                     Ver en Google Maps ↗
                   </p>
                 ) : (
-                   <p className="text-xs text-gray-400 mt-1">Sin coordenadas</p>
+                  <p className="text-xs text-gray-400 mt-1">Sin coordenadas</p>
                 )}
               </div>
             </div>
@@ -317,13 +398,13 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
               </h3>
 
               <div className="grid grid-cols-3 gap-3">
-
                 <button
                   onClick={() => handleChangeStatus('confirmed')}
                   className={`p-4 rounded-2xl flex flex-col items-center font-bold text-sm 
-                    ${currentStatus === 'confirmed'
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-50 dark:bg-slate-800 text-gray-600 dark:text-gray-300'
+                    ${
+                      currentStatus === 'confirmed'
+                        ? 'bg-green-500 text-white'
+                        : 'bg-gray-50 dark:bg-slate-800 text-gray-600 dark:text-gray-300'
                     }`}
                 >
                   <Check size={20} />
@@ -333,9 +414,10 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
                 <button
                   onClick={() => handleChangeStatus('maybe')}
                   className={`p-4 rounded-2xl flex flex-col items-center font-bold text-sm 
-                    ${currentStatus === 'maybe'
-                      ? 'bg-orange-400 text-white'
-                      : 'bg-gray-50 dark:bg-slate-800 text-gray-600 dark:text-gray-300'
+                    ${
+                      currentStatus === 'maybe'
+                        ? 'bg-orange-400 text-white'
+                        : 'bg-gray-50 dark:bg-slate-800 text-gray-600 dark:text-gray-300'
                     }`}
                 >
                   <HelpCircle size={20} />
@@ -345,15 +427,15 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
                 <button
                   onClick={() => handleChangeStatus('declined')}
                   className={`p-4 rounded-2xl flex flex-col items-center font-bold text-sm 
-                    ${currentStatus === 'declined'
-                      ? 'bg-gray-400 text-white'
-                      : 'bg-gray-50 dark:bg-slate-800 text-gray-600 dark:text-gray-300'
+                    ${
+                      currentStatus === 'declined'
+                        ? 'bg-gray-400 text-white'
+                        : 'bg-gray-50 dark:bg-slate-800 text-gray-600 dark:text-gray-300'
                     }`}
                 >
                   <X size={20} />
                   No iré
                 </button>
-
               </div>
             </div>
           )}
@@ -361,7 +443,9 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
           {/* DESCRIPCIÓN */}
           {event.description && (
             <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-sm border border-gray-50 dark:border-slate-800 flex items-start gap-4">
-              <div className={`p-3 rounded-2xl ${themeBgColor} ${themeAccentColor}`}>
+              <div
+                className={`p-3 rounded-2xl ${themeBgColor} ${themeAccentColor}`}
+              >
                 <AlignLeft size={24} />
               </div>
               <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line">
@@ -373,7 +457,6 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
           {/* GESTIÓN DEL EVENTO */}
           {isCreator && (
             <div className="grid grid-cols-2 gap-3 mt-4">
-
               <button
                 onClick={() => onEdit(event)}
                 className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-[2.5rem] border border-orange-100 dark:border-orange-800 flex items-center gap-3 text-orange-600 dark:text-orange-300 font-bold"
@@ -387,7 +470,6 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
               >
                 <Trash2 size={20} /> Eliminar
               </button>
-
             </div>
           )}
         </div>
@@ -397,7 +479,11 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
     if (currentTab === 'gallery') {
       return (
         <div className="p-6">
-          <EventGallery eventId={event.id} user={user} isConfirmed={isConfirmed || isCreator} />
+          <EventGallery
+            eventId={event.id}
+            user={user}
+            isConfirmed={isConfirmed || isCreator}
+          />
         </div>
       );
     }
@@ -405,7 +491,11 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
     if (currentTab === 'chat') {
       return (
         <div className="h-full">
-          <EventChat eventId={event.id} user={user} isConfirmed={isConfirmed || isCreator} />
+          <EventChat
+            eventId={event.id}
+            user={user}
+            isConfirmed={isConfirmed || isCreator}
+          />
         </div>
       );
     }
@@ -413,13 +503,11 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
 
   return (
     <div className="flex flex-col h-screen bg-gray-100 dark:bg-slate-950 animate-fade-in font-sans text-ink dark:text-slate-100">
-
       {/* HEADER — FIX: SIN BORDES REDONDEADOS */}
       <div
         className={`min-h-[35vh] relative shrink-0 ${headerBgClass}`}
         style={headerBgStyle}
       >
-
         {event.background?.type === 'image' && (
           <div className="absolute inset-0 bg-black/40"></div>
         )}
@@ -433,7 +521,6 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
           </button>
 
           <div className="flex items-center gap-2 h-10">
-
             {isCreator && (
               <button
                 onClick={() => onEdit(event)}
@@ -452,26 +539,29 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
             <div className="h-10 px-4 bg-white/20 dark:bg-white/10 backdrop-blur-md rounded-full text-white text-xs font-bold uppercase tracking-wide flex items-center border border-white/10">
               {event.type}
             </div>
-
           </div>
         </div>
 
         <div className="absolute bottom-0 left-0 w-full p-8 bg-gradient-to-t from-black/60 via-black/30 to-transparent z-10">
-          <h1 className="text-4xl font-black text-white mb-2">{event.name}</h1>
-          <p className="text-white/80 text-sm">Organizado por {event.creatorName}</p>
+          <h1 className="text-4xl font-black text-white mb-2">
+            {event.name}
+          </h1>
+          <p className="text-white/80 text-sm">
+            Organizado por {event.creatorName}
+          </p>
         </div>
       </div>
 
       {/* TABS */}
       <div className="relative z-30 bg-gray-100 dark:bg-slate-900 rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] dark:shadow-none -mt-2 pt-4 pb-0">
         <div className="flex justify-around border-b border-gray-200 dark:border-slate-700 px-6">
-
           <button
             onClick={() => setCurrentTab('info')}
             className={`flex-1 py-3 text-center font-bold text-sm border-b-2 transition-all
-              ${currentTab === 'info'
-                ? 'text-orange-600 dark:text-orange-300 border-orange-600 dark:border-orange-300'
-                : 'text-gray-400 dark:text-gray-500 border-transparent'
+              ${
+                currentTab === 'info'
+                  ? 'text-orange-600 dark:text-orange-300 border-orange-600 dark:border-orange-300'
+                  : 'text-gray-400 dark:text-gray-500 border-transparent'
               }`}
           >
             <Calendar size={18} className="inline mr-2" /> Info
@@ -480,9 +570,10 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
           <button
             onClick={() => setCurrentTab('gallery')}
             className={`flex-1 py-3 text-center font-bold text-sm border-b-2 transition-all
-              ${currentTab === 'gallery'
-                ? 'text-orange-600 dark:text-orange-300 border-orange-600 dark:border-orange-300'
-                : 'text-gray-400 dark:text-gray-500 border-transparent'
+              ${
+                currentTab === 'gallery'
+                  ? 'text-orange-600 dark:text-orange-300 border-orange-600 dark:border-orange-300'
+                  : 'text-gray-400 dark:text-gray-500 border-transparent'
               }`}
           >
             <Image size={18} className="inline mr-2" /> Galería
@@ -491,14 +582,14 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
           <button
             onClick={() => setCurrentTab('chat')}
             className={`flex-1 py-3 text-center font-bold text-sm border-b-2 transition-all
-              ${currentTab === 'chat'
-                ? 'text-orange-600 dark:text-orange-300 border-orange-600 dark:border-orange-300'
-                : 'text-gray-400 dark:text-gray-500 border-transparent'
+              ${
+                currentTab === 'chat'
+                  ? 'text-orange-600 dark:text-orange-300 border-orange-600 dark:border-orange-300'
+                  : 'text-gray-400 dark:text-gray-500 border-transparent'
               }`}
           >
             <MessageCircle size={18} className="inline mr-2" /> Chat
           </button>
-
         </div>
       </div>
 
@@ -506,7 +597,6 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
       <div className="flex-1 overflow-y-auto overflow-x-hidden pb-8">
         {renderContent()}
       </div>
-
     </div>
   );
 }
