@@ -7,7 +7,7 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { auth, db, storage } from '../config/firebase';
+import { auth, db, storage } from '../config/firebase'; // Asegúrate de que esta ruta sea correcta en tu proyecto
 import { 
   User, Mail, Lock, Phone, Camera, X, 
   Eye, EyeOff, AlertTriangle, CheckCircle2 
@@ -20,7 +20,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
   const [confirmPass, setConfirmPass] = useState(''); 
-  const [username, setUsername] = useState('');       
+  const [username, setUsername] = useState('');        
   const [phone, setPhone] = useState(''); 
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -53,14 +53,39 @@ export default function AuthPage() {
     }
   };
 
-  // --- VALIDACIONES ---
+  // --- VALIDACIONES CORREGIDAS ---
   const validateForm = () => {
+    const emailVal = email.trim();
+    const passVal = pass.trim();
+
+    // 1. Validar campos vacíos (Lógica pedida)
+    
+    // Si estamos en Login o Register y ambos campos están vacíos
+    if (!emailVal && !passVal && view !== 'reset') {
+      setMessage({ text: 'Por favor, ingrese sus credenciales.', type: 'error' });
+      return false;
+    }
+
+    // Si falta solo el correo
+    if (!emailVal) {
+      setMessage({ text: 'Ingrese su correo electrónico.', type: 'error' });
+      return false;
+    }
+
+    // Si falta solo la contraseña (no aplica en Reset)
+    if (!passVal && view !== 'reset') {
+      setMessage({ text: 'Ingrese su contraseña.', type: 'error' });
+      return false;
+    }
+
+    // 2. Validar formato de correo (Lógica original)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(emailVal)) {
       setMessage({ text: 'El formato del correo es inválido.', type: 'error' });
       return false;
     }
 
+    // 3. Validaciones específicas de Registro
     if (view === 'register') {
       if (!username.trim()) {
         setMessage({ text: 'El nombre de usuario es obligatorio.', type: 'error' });
@@ -92,13 +117,14 @@ export default function AuthPage() {
     try {
       if (view === 'login') {
         await signInWithEmailAndPassword(auth, email, pass);
-        // Login exitoso (App se redirige por onAuthStateChanged)
+        // Login exitoso
       } else if (view === 'register') {
         const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
         const user = userCredential.user;
         let photoURL = '';
 
         if (photoFile) {
+          // Nota: Asegúrate de que las reglas de Firebase Storage permitan la subida
           const storageRef = ref(storage, `avatars/${user.uid}`);
           await uploadBytes(storageRef, photoFile);
           photoURL = await getDownloadURL(storageRef);
@@ -139,10 +165,17 @@ export default function AuthPage() {
   // --- SUBMIT RESET ---
   const handleResetSubmit = async (e) => {
     e.preventDefault();
-    if (!email) { 
+    // Reutilizamos validateForm o chequeamos solo email aquí manualmente
+    if (!email.trim()) { 
       setMessage({ text: 'Ingresa tu correo para continuar.', type: 'error' }); 
       return; 
     }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+       setMessage({ text: 'El formato del correo es inválido.', type: 'error' });
+       return;
+    }
+
     setLoading(true);
     try {
       await sendPasswordResetEmail(auth, email);
@@ -225,9 +258,8 @@ export default function AuthPage() {
       {/* Card principal */}
       <div className="bg-white/95 backdrop-blur-sm w-full max-w-md rounded-3xl p-7 shadow-2xl border border-white/30 animate-slide-up">
         <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">
-  {isReset ? 'Recuperar acceso' : isRegister ? 'Crear cuenta' : 'Bienvenido de nuevo'}
-</h2>
-
+          {isReset ? 'Recuperar acceso' : isRegister ? 'Crear cuenta' : 'Bienvenido de nuevo'}
+        </h2>
 
         <form
           onSubmit={isReset ? handleResetSubmit : handleAuthSubmit}
