@@ -61,10 +61,25 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
   const isConfirmed = currentStatus === 'confirmed';
 
   // --- Estados para agregar invitado ---
-const [showAddGuest, setShowAddGuest] = useState(false);
-const [guestName, setGuestName] = useState('');
-const [guestPhone, setGuestPhone] = useState('');
-const [savingGuest, setSavingGuest] = useState(false);
+  const [showAddGuest, setShowAddGuest] = useState(false);
+  // (Estos estados no se usaban en tu código original completo, pero los dejo por si acaso los implementas luego)
+  // const [guestName, setGuestName] = useState('');
+  // const [guestPhone, setGuestPhone] = useState('');
+  // const [savingGuest, setSavingGuest] = useState(false);
+
+  // --- ABRIR GOOGLE MAPS EXTERNO ---
+  const handleOpenMap = () => {
+    // Verificamos si existen latitud y longitud guardadas
+    if (event.lat && event.lng) {
+      // URL oficial para búsqueda por coordenadas
+      const url = `https://www.google.com/maps/search/?api=1&query=${event.lat},${event.lng}`;
+      window.open(url, '_blank');
+    } else if (event.locationName) {
+      // Fallback: Si no hay coordenadas, buscamos por el nombre del lugar
+      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.locationName)}`;
+      window.open(url, '_blank');
+    }
+  };
 
   const handleDelete = async () => {
     if (!window.confirm('¿Eliminar este evento?')) return;
@@ -163,18 +178,18 @@ const [savingGuest, setSavingGuest] = useState(false);
                 Invitados
               </h3>
               {isCreator && (
-  <button
-  onClick={() => setShowAddGuest(true)}
-  className="flex items-center justify-center gap-1 
-             w-12 h-12 bg-orange-100 text-orange-600 
-             border border-orange-300 rounded-xl
-             shadow-sm hover:bg-orange-200 
-             active:scale-95 transition-all"
->
-  <Users size={18} className="text-orange-600" />
-  <span className="text-xl font-bold text-orange-600">+</span>
-</button>
-)}
+                <button
+                  onClick={() => setShowAddGuest(true)}
+                  className="flex items-center justify-center gap-1 
+                             w-12 h-12 bg-orange-100 text-orange-600 
+                             border border-orange-300 rounded-xl
+                             shadow-sm hover:bg-orange-200 
+                             active:scale-95 transition-all"
+                >
+                  <Users size={18} className="text-orange-600" />
+                  <span className="text-xl font-bold text-orange-600">+</span>
+                </button>
+              )}
               <span className={`${themeBgColor} ${themeAccentColor} px-2.5 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 border ${themeBorderColor}`}>
                 <Users size={12} /> {event.attendees?.length || 0}
               </span>
@@ -270,17 +285,29 @@ const [savingGuest, setSavingGuest] = useState(false);
 
           </div>
 
-          {/* UBICACIÓN */}
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-[2.5rem] shadow-sm border border-gray-50 dark:border-slate-800">
+          {/* UBICACIÓN - CLICK PARA ABRIR MAPA */}
+          <button 
+            onClick={handleOpenMap}
+            className="w-full text-left bg-white dark:bg-slate-900 p-4 rounded-[2.5rem] shadow-sm border border-gray-50 dark:border-slate-800 active:scale-95 transition-transform group hover:border-orange-200"
+          >
             <div className="flex items-center gap-3">
-              <div className={`p-3 rounded-full ${themeBgColor} ${themeAccentColor}`}>
+              <div className={`p-3 rounded-full ${themeBgColor} ${themeAccentColor} group-hover:bg-orange-100 transition-colors`}>
                 <MapPin size={24} />
               </div>
-              <p className="font-bold text-gray-800 dark:text-white">
-                {event.locationName || 'Sin ubicación'}
-              </p>
+              <div className="flex-1">
+                <p className="font-bold text-gray-800 dark:text-white leading-tight">
+                  {event.locationName || 'Sin ubicación'}
+                </p>
+                {event.lat && event.lng ? (
+                  <p className="text-xs text-orange-500 font-bold mt-1 flex items-center gap-1">
+                    Ver en Google Maps ↗
+                  </p>
+                ) : (
+                   <p className="text-xs text-gray-400 mt-1">Sin coordenadas</p>
+                )}
+              </div>
             </div>
-          </div>
+          </button>
 
           {/* ESTADO DEL INVITADO */}
           {!isCreator && (
@@ -481,7 +508,5 @@ const [savingGuest, setSavingGuest] = useState(false);
       </div>
 
     </div>
-
-    
   );
 }
