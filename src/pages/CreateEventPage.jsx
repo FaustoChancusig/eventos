@@ -422,18 +422,18 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
           initialLng={formData.lng}
         />
       ) : (
-        <div className="flex flex-col h-screen bg-surface-50 font-sans animate-fade-in relative">
+        <div className="flex flex-col h-screen bg-surface-50 dark:bg-slate-950 font-sans animate-fade-in relative text-ink dark:text-slate-100">
 
           {/* Header */}
-          <div className="bg-white p-4 shadow-sm flex items-center sticky top-0 z-[100] border-b border-surface-200">
+          <div className="bg-white dark:bg-slate-900 p-4 shadow-sm flex items-center sticky top-0 z-[100] border-b border-surface-200 dark:border-slate-800">
             <button
               onClick={onBack}
-              className="p-2 hover:bg-surface-100 rounded-full transition text-ink/70 active:scale-95"
+              className="p-2 hover:bg-surface-100 dark:hover:bg-slate-800 rounded-full transition text-ink/70 dark:text-slate-200 active:scale-95"
             >
               <ArrowLeft size={24} />
             </button>
 
-            <h2 className="ml-4 text-lg font-bold text-ink">
+            <h2 className="ml-4 text-lg font-bold text-ink dark:text-slate-100">
               {isEditing ? 'Editar Evento' : 'Nuevo Evento'}
             </h2>
           </div>
@@ -441,17 +441,17 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
           <form className="flex-1 overflow-y-auto p-6 space-y-6 pb-24">
 
             {error && (
-              <div className="bg-dangerBg border border-danger/50 text-danger p-3 rounded-xl flex items-center gap-3 text-sm font-medium animate-fade-in">
+              <div className="bg-dangerBg dark:bg-red-950 border border-danger/50 dark:border-red-700 text-danger dark:text-red-200 p-3 rounded-xl flex items-center gap-3 text-sm font-medium animate-fade-in">
                 <AlertCircle size={20} /> {error}
               </div>
             )}
 
             {/* === Detalles === */}
             <div className="space-y-3">
-              <h3 className="text-xs font-bold text-ink/40 uppercase tracking-wider">Detalles</h3>
+              <h3 className="text-xs font-bold text-ink/40 dark:text-slate-400 uppercase tracking-wider">Detalles</h3>
               
               {/* NOMBRE */}
-              <div className="bg-white p-4 rounded-2xl shadow-sm border border-surface-200 flex items-center gap-3">
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-surface-200 dark:border-slate-800 flex items-center gap-3">
                 <Type className="text-primary-600" size={20} />
                 <input
                   name="name"
@@ -461,21 +461,21 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
                     if (nameError) setNameError(null);
                   }}
                   placeholder="Nombre del evento..."
-                  className="w-full outline-none text-ink font-medium placeholder-ink/40"
+                  className="w-full outline-none text-ink dark:text-slate-100 font-medium placeholder-ink/40 dark:placeholder-slate-500 bg-transparent"
                 />
               </div>
 
               {nameError && (
-                <p className="text-danger bg-dangerBg border border-danger/40 p-2 rounded-lg text-sm flex items-center gap-2 animate-fade-in">
+                <p className="text-danger dark:text-red-300 bg-dangerBg dark:bg-red-950 border border-danger/40 dark:border-red-700 p-2 rounded-lg text-sm flex items-center gap-2 animate-fade-in">
                   <AlertCircle size={16}/> {nameError}
                 </p>
               )}
 
               {/* === Etiquetas === */}
-              <div className="bg-white p-5 rounded-2xl shadow-sm border border-surface-200">
+              <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-surface-200 dark:border-slate-800">
                 
                 <div className="flex justify-between items-center mb-3">
-                  <label className="text-xs text-ink/40 font-bold uppercase">Categoría</label>
+                  <label className="text-xs text-ink/40 dark:text-slate-400 font-bold uppercase">Categoría</label>
 
                   {!isAddingTag ? (
                     <button
@@ -493,12 +493,12 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
                         value={newTag}
                         onChange={(e) => setNewTag(e.target.value)}
                         placeholder="Nueva..."
-                        className="flex-1 bg-surface-100 border border-primary-300 rounded-lg px-2 py-1 text-sm outline-none focus:border-primary-500"
+                        className="flex-1 bg-surface-100 dark:bg-slate-800 border border-primary-300 rounded-lg px-2 py-1 text-sm outline-none focus:border-primary-500 text-ink dark:text-slate-100 placeholder-ink/40 dark:placeholder-slate-500"
                       />
-                      <button type="button" onClick={handleAddTag} className="text-green-600 bg-green-50 p-1 rounded active:scale-95">
+                      <button type="button" onClick={handleAddTag} className="text-green-600 bg-green-50 dark:bg-green-950 p-1 rounded active:scale-95">
                         <Check size={16} />
                       </button>
-                      <button type="button" onClick={() => setIsAddingTag(false)} className="text-danger bg-dangerBg p-1 rounded active:scale-95">
+                      <button type="button" onClick={() => setIsAddingTag(false)} className="text-danger dark:text-red-300 bg-dangerBg dark:bg-red-950 p-1 rounded active:scale-95">
                         <X size={16} />
                       </button>
                     </div>
@@ -515,7 +515,7 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
                         px-4 py-2 rounded-full text-sm font-bold border transition-all whitespace-nowrap active:scale-95
                         ${formData.type === tag
                           ? 'bg-primary-500 text-white border-primary-500 shadow'
-                          : 'bg-white text-ink/60 border-surface-300'}
+                          : 'bg-white dark:bg-slate-900 text-ink/60 dark:text-slate-300 border-surface-300 dark:border-slate-700'}
                       `}
                     >
                       {tag}
@@ -531,7 +531,7 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
                           px-4 py-2 rounded-full text-sm font-bold pr-9 border transition-all whitespace-nowrap active:scale-95
                           ${formData.type === tag.name
                             ? 'bg-primary-100 text-primary-800 border-primary-300 shadow-sm'
-                            : 'bg-white text-ink/60 border-surface-300 border-dashed'}
+                            : 'bg-white dark:bg-slate-900 text-ink/60 dark:text-slate-300 border-surface-300 dark:border-slate-700 border-dashed'}
                         `}
                       >
                         {tag.name}
@@ -540,7 +540,7 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
                       <button
                         type="button"
                         onClick={(e) => handleDeleteTag(tag.id, e)}
-                        className="absolute right-1 top-1.5 p-1 text-ink/40 hover:text-danger active:scale-90"
+                        className="absolute right-1 top-1.5 p-1 text-ink/40 dark:text-slate-400 hover:text-danger dark:hover:text-red-400 active:scale-90"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -553,10 +553,10 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
 
             {/* === Fecha y hora (con bottom sheet) === */}
             <div className="space-y-2">
-              <h3 className="text-xs font-bold text-ink/40 uppercase tracking-wider">Fecha y Hora</h3>
+              <h3 className="text-xs font-bold text-ink/40 dark:text-slate-400 uppercase tracking-wider">Fecha y Hora</h3>
 
               {(dateError || timeError) && (
-                <p className="text-danger bg-dangerBg border border-danger/40 p-2 rounded-lg text-sm flex items-center gap-2 animate-fade-in">
+                <p className="text-danger dark:text-red-300 bg-dangerBg dark:bg-red-950 border border-danger/40 dark:border-red-700 p-2 rounded-lg text-sm flex items-center gap-2 animate-fade-in">
                   <AlertCircle size={16}/> {dateError || timeError}
                 </p>
               )}
@@ -565,7 +565,7 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
                 type="button"
                 onClick={() => setShowDateTimeSheet(true)}
                 className="
-                  w-full bg-white rounded-2xl shadow-sm border border-surface-200 
+                  w-full bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-surface-200 dark:border-slate-800
                   flex items-center justify-between px-4 py-4 active:scale-95 transition
                 "
               >
@@ -574,22 +574,22 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
                     <Calendar size={20} />
                   </div>
                   <div className="text-left">
-                    <p className="text-xs text-ink/40 font-bold uppercase mb-0.5">Fecha</p>
-                    <p className="text-sm font-semibold text-ink">
+                    <p className="text-xs text-ink/40 dark:text-slate-400 font-bold uppercase mb-0.5">Fecha</p>
+                    <p className="text-sm font-semibold text-ink dark:text-slate-100">
                       {formatDateLabel()}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="h-8 w-px bg-surface-300" />
+                  <div className="h-8 w-px bg-surface-300 dark:bg-slate-700" />
                   <div className="flex items-center gap-2">
                     <div className="p-2 rounded-full bg-primary-50 text-primary-600">
                       <Clock size={18} />
                     </div>
                     <div className="text-left">
-                      <p className="text-xs text-ink/40 font-bold uppercase mb-0.5">Hora</p>
-                      <p className="text-sm font-semibold text-ink">
+                      <p className="text-xs text-ink/40 dark:text-slate-400 font-bold uppercase mb-0.5">Hora</p>
+                      <p className="text-sm font-semibold text-ink dark:text-slate-100">
                         {formatTimeLabel()}
                       </p>
                     </div>
@@ -600,34 +600,34 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
 
             {/* === Ubicación === */}
             <div className="space-y-2">
-              <h3 className="text-xs font-bold text-ink/40 uppercase tracking-wider">Ubicación</h3>
+              <h3 className="text-xs font-bold text-ink/40 dark:text-slate-400 uppercase tracking-wider">Ubicación</h3>
 
               {locationError && (
-                <p className="text-danger bg-dangerBg border border-danger/40 p-2 rounded-lg text-sm flex items-center gap-2 animate-fade-in">
+                <p className="text-danger dark:text-red-300 bg-dangerBg dark:bg-red-950 border border-danger/40 dark:border-red-700 p-2 rounded-lg text-sm flex items-center gap-2 animate-fade-in">
                   <AlertCircle size={16}/> {locationError}
                 </p>
               )}
 
-              <div className="bg-white rounded-2xl shadow-sm border border-surface-200 overflow-hidden">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-surface-200 dark:border-slate-800 overflow-hidden">
                 <div
                   onClick={() => setShowMapSelector(true)}
-                  className="flex items-center gap-3 p-4 active:bg-surface-100 transition cursor-pointer"
+                  className="flex items-center gap-3 p-4 active:bg-surface-100 dark:active:bg-slate-800 transition cursor-pointer"
                 >
                   <MapPin className="text-primary-600 shrink-0" size={24} />
 
                   <div className="flex-1">
                     {formData.locationName ? (
-                      <div className="font-bold text-ink text-sm">
+                      <div className="font-bold text-ink dark:text-slate-100 text-sm">
                         {formData.locationName}
                       </div>
                     ) : (
-                      <div className="text-ink/40 text-sm font-medium">
+                      <div className="text-ink/40 dark:text-slate-400 text-sm font-medium">
                         Selecciona la ubicación en el mapa
                       </div>
                     )}
 
                     {formData.lat && (
-                      <div className="text-[10px] text-green-600 font-bold mt-0.5">
+                      <div className="text-[10px] text-green-600 dark:text-green-400 font-bold mt-0.5">
                         Ubicación confirmada ✓
                       </div>
                     )}
@@ -652,15 +652,15 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
             </div>
 
             {/* === Descripción === */}
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-surface-200 flex gap-3">
-              <AlignLeft className="text-ink/40 mt-1" size={20} />
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-surface-200 dark:border-slate-800 flex gap-3">
+              <AlignLeft className="text-ink/40 dark:text-slate-400 mt-1" size={20} />
               <textarea
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
                 rows="3"
                 placeholder="Notas extra..."
-                className="w-full outline-none text-ink text-sm resize-none placeholder-ink/40"
+                className="w-full outline-none text-ink dark:text-slate-100 text-sm resize-none placeholder-ink/40 dark:placeholder-slate-500 bg-transparent"
               ></textarea>
             </div>
 
@@ -670,6 +670,7 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
               onClick={handlePreview}
               className="
                 w-full bg-primary-500 hover:bg-primary-600 
+                dark:bg-primary-500 dark:hover:bg-primary-400
                 text-white font-bold py-4 rounded-xl shadow-lg 
                 active:scale-95 flex justify-center items-center gap-2 transition
               "
@@ -699,20 +700,21 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
             <div className="fixed inset-0 z-[120] flex flex-col justify-end bg-black/40 backdrop-blur-sm">
               <div
                 className="
-                  bg-white rounded-t-3xl shadow-xl p-4 pt-3 
+                  bg-white dark:bg-slate-900 rounded-t-3xl shadow-xl p-4 pt-3 
                   animate-[bottomSheet_0.25s_cubic-bezier(.28,.8,.32,1)]
                 "
               >
-                <div className="w-12 h-1.5 bg-surface-300 rounded-full mx-auto mb-3" />
+                <div className="w-12 h-1.5 bg-surface-300 dark:bg-slate-700 rounded-full mx-auto mb-3" />
 
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-bold text-ink uppercase tracking-wide">
+                  <h3 className="text-sm font-bold text-ink dark:text-slate-100 uppercase tracking-wide">
                     Fecha y Hora del evento
                   </h3>
+
                   <button
                     type="button"
                     onClick={() => setShowDateTimeSheet(false)}
-                    className="p-2 rounded-full hover:bg-surface-100 active:scale-95"
+                    className="p-2 rounded-full hover:bg-surface-100 dark:hover:bg-slate-800 active:scale-95"
                   >
                     <X size={18} className="text-ink/60" />
                   </button>
@@ -720,7 +722,7 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
 
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   {/* FECHA */}
-                  <div className="bg-surface-50 p-3 rounded-2xl border border-surface-200">
+                  <div className="bg-surface-50 dark:bg-slate-900/70 p-3 rounded-2xl border border-surface-200 dark:border-slate-700">
                     <div className="flex items-center gap-2 mb-2 text-primary-700">
                       <Calendar size={18} />
                       <span className="text-xs font-bold uppercase">FECHA</span>
@@ -735,12 +737,12 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
                         if (dateError) setDateError(null);
                         if (timeError) setTimeError(null);
                       }}
-                      className="w-full outline-none text-ink bg-transparent text-sm"
+                      className="w-full outline-none text-ink dark:text-slate-100 bg-transparent text-sm"
                     />
                   </div>
 
                   {/* HORA */}
-                  <div className="bg-surface-50 p-3 rounded-2xl border border-surface-200">
+                  <div className="bg-surface-50 dark:bg-slate-900/70 p-3 rounded-2xl border border-surface-200 dark:border-slate-700">
                     <div className="flex items-center gap-2 mb-2 text-primary-700">
                       <Clock size={18} />
                       <span className="text-xs font-bold uppercase">HORA</span>
@@ -760,7 +762,7 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
                         setFormData({ ...formData, time: e.target.value });
                         if (timeError) setTimeError(null);
                       }}
-                      className="w-full outline-none text-ink bg-transparent text-sm"
+                      className="w-full outline-none text-ink dark:text-slate-100 bg-transparent text-sm"
                     />
                   </div>
                 </div>
@@ -769,7 +771,9 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
                   type="button"
                   onClick={() => setShowDateTimeSheet(false)}
                   className="
-                    w-full bg-primary-500 hover:bg-primary-600 text-white 
+                    w-full bg-primary-500 hover:bg-primary-600 
+                    dark:bg-primary-500 dark:hover:bg-primary-400
+                    text-white 
                     font-bold py-3 rounded-xl active:scale-95 transition
                   "
                 >

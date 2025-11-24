@@ -220,7 +220,7 @@ export default function AuthPage() {
           </span>
         </div>
         <h1 className="text-4xl font-extrabold text-white tracking-tight drop-shadow-md">
-          EventMaster
+          EventHub
         </h1>
         <p className="text-orange-100 text-sm mt-1 font-light">
           Organiza, invita y comparte tus mejores momentos

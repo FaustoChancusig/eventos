@@ -115,13 +115,13 @@ export default function InvitePage({
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 font-sans animate-fade-in">
+    <div className="flex flex-col h-screen bg-gray-100 dark:bg-slate-950 font-sans animate-fade-in">
 
       {/* HEADER */}
-      <div className="bg-white p-4 shadow-sm flex items-center sticky top-0 z-10">
+      <div className="bg-white dark:bg-slate-900 dark:text-white p-4 shadow-sm flex items-center sticky top-0 z-10 border-b border-gray-200 dark:border-slate-800">
         <button
           onClick={onBack}
-          className="p-2 hover:bg-gray-100 rounded-full text-gray-600"
+          className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full text-gray-600 dark:text-gray-300"
         >
           <ArrowLeft size={24} />
         </button>
@@ -136,7 +136,7 @@ export default function InvitePage({
               ? navigator.share({ url: eventLink })
               : alert(eventLink)
           }
-          className="ml-auto p-2 bg-orange-50 text-orange-600 rounded-full"
+          className="ml-auto p-2 bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300 rounded-full"
         >
           <Share2 size={20} />
         </button>
@@ -147,15 +147,15 @@ export default function InvitePage({
         {/* INICIO */}
         {contacts.length === 0 && !loading && (
           <div className="text-center flex flex-col items-center justify-center h-64">
-            <div className="bg-orange-100 p-6 rounded-full mb-4 animate-bounce">
-              <Users size={48} className="text-orange-600" />
+             <div className="bg-orange-200 dark:bg-orange-900/40 p-6 rounded-full mb-4 animate-bounce">
+              <Users size={48} className="text-orange-600 dark:text-orange-300" />
             </div>
-            <p className="text-gray-500 mb-6">
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               Importa tus contactos para enviar invitaciones masivas.
             </p>
             <button
               onClick={loadContacts}
-              className="bg-orange-600 text-white px-8 py-3 rounded-xl font-bold"
+              className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-3 rounded-xl font-bold"
             >
               Ver contactos
             </button>
@@ -165,8 +165,8 @@ export default function InvitePage({
         {/* CARGANDO */}
         {loading && (
           <div className="flex flex-col items-center justify-center h-64">
-            <div className="h-8 w-8 border-t-2 border-orange-600 rounded-full animate-spin"></div>
-            <p className="text-gray-500 mt-3">Cargando...</p>
+            <div className="h-8 w-8 border-t-2 border-orange-600 dark:border-orange-300 rounded-full animate-spin"></div>
+            <p className="text-gray-500 dark:text-gray-400 mt-3">Cargando...</p>
           </div>
         )}
 
@@ -176,14 +176,14 @@ export default function InvitePage({
             <div className="relative">
               <Search
                 size={18}
-                className="absolute left-3 top-3 text-gray-400"
+                className="absolute left-3 top-3 text-gray-400 dark:text-gray-500"
               />
               <input
                 type="text"
                 placeholder="Buscar contacto..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white border border-gray-200"
+                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white dark:bg-slate-900 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-orange-400 outline-none"
               />
             </div>
           </div>
@@ -199,29 +199,32 @@ export default function InvitePage({
             return (
               <div
                 key={i}
-                className={`p-4 bg-white rounded-2xl border shadow-sm flex items-center justify-between cursor-pointer ${
-                  isSelected ? "ring-2 ring-orange-400" : ""
-                }`}
+                className={`p-4 rounded-2xl border shadow-sm flex items-center justify-between cursor-pointer
+                  bg-white dark:bg-slate-900
+                  border-gray-200 dark:border-slate-800
+                  transition
+                  ${isSelected ? "ring-2 ring-orange-400 dark:ring-orange-300" : ""}
+                `}
                 onClick={() => toggleSelect(cleanPhone)}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-200 to-orange-400 flex items-center justify-center text-white font-bold">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-300 to-orange-500 dark:from-orange-800 dark:to-orange-600 flex items-center justify-center text-white font-bold">
                     {c.name.charAt(0)}
                   </div>
 
                   <div>
-                    <p className="font-bold text-gray-800">{c.name}</p>
-                    <p className="text-xs text-gray-400">{c.phone}</p>
+                    <p className="font-bold text-gray-800 dark:text-gray-200">{c.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{c.phone}</p>
 
                     {isAppUser && (
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full mt-1 inline-flex items-center gap-1">
+                      <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full mt-1 inline-flex items-center gap-1">
                         <CheckCircle size={12} /> En la App
                       </span>
                     )}
                   </div>
                 </div>
 
-                <Smartphone className="text-gray-500" />
+                <Smartphone className="text-gray-500 dark:text-gray-300" />
               </div>
             );
           })}
@@ -230,17 +233,17 @@ export default function InvitePage({
 
       {/* FOOTER ACCIONES */}
       {contacts.length > 0 && (
-        <div className="bg-white border-t p-4 fixed bottom-0 left-0 right-0 flex gap-3">
+        <div className="bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 p-4 fixed bottom-0 left-0 right-0 flex gap-3">
           <button
             onClick={sendWhatsAppToSelected}
-            className="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold"
+            className="flex-1 py-3 bg-green-600 dark:bg-green-700 text-white rounded-xl font-bold"
           >
             WhatsApp ({selected.length})
           </button>
 
           <button
             onClick={notifyRegisteredUsers}
-            className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold"
+            className="flex-1 py-3 bg-blue-600 dark:bg-blue-700 text-white rounded-xl font-bold"
           >
             Notificar (App)
           </button>

@@ -74,23 +74,23 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
   const displayName = user?.displayName?.split(' ')[0] || 'Usuario';
 
   return (
-    <div className="flex flex-col w-full h-screen bg-gray-50 font-sans relative overflow-hidden">
+    <div className="flex flex-col w-full h-screen bg-gray-50 dark:bg-gray-900 font-sans relative overflow-hidden transition-colors">
       
       {/* --- HEADER --- */}
       <div className="pt-12 pb-2 px-6 flex justify-between items-center shrink-0 z-20 relative">
         <div className="flex-1 mr-4">
           {isSearchOpen ? (
-            <div className="flex items-center bg-white rounded-full px-4 py-3 animate-fade-in shadow-sm border border-gray-100">
-              <Search size={18} className="text-gray-400 mr-2" />
+            <div className="flex items-center bg-white dark:bg-gray-800 rounded-full px-4 py-3 animate-fade-in shadow-sm border border-gray-200 dark:border-gray-700">
+              <Search size={18} className="text-gray-400 dark:text-gray-300 mr-2" />
               <input 
                 autoFocus
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Buscar..."
-                className="bg-transparent outline-none w-full text-gray-800 placeholder-gray-400 text-sm"
+                className="bg-transparent outline-none w-full text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm"
               />
-              <button onClick={() => {setIsSearchOpen(false); setSearchTerm('');}} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => {setIsSearchOpen(false); setSearchTerm('');}} className="text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-gray-100">
                 <X size={18} />
               </button>
             </div>
@@ -98,17 +98,17 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
             <div className="flex items-center gap-3 animate-fade-in">
               <div 
                 onClick={() => onNavigate('profile')}
-                className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-md bg-gray-200 cursor-pointer active:scale-90 transition-transform"
+                className="w-10 h-10 rounded-full overflow-hidden border-2 border-white dark:border-gray-700 shadow-md bg-gray-200 dark:bg-gray-700 cursor-pointer active:scale-90 transition-transform"
               >
                 {user?.photoURL ? (
                   <img src={user.photoURL} alt="User" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400"><User /></div>
+                  <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-300"><User /></div>
                 )}
               </div>
               <div>
-                <p className="text-xs text-gray-400 font-medium">Hola,</p>
-                <h1 className="text-lg font-black text-gray-800 leading-none">{displayName}</h1>
+                 <p className="text-xs text-gray-400 dark:text-gray-300 font-medium">Hola,</p>
+                <h1 className="text-lg font-black text-gray-800 dark:text-gray-100 leading-none">{displayName}</h1>
               </div>
             </div>
           )}
@@ -116,16 +116,16 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
 
         <div className="flex gap-3 shrink-0">
           {!isSearchOpen && (
-            <button onClick={() => setIsSearchOpen(true)} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-600 shadow-sm border border-gray-100 active:scale-95 transition-transform">
+            <button onClick={() => setIsSearchOpen(true)} className="w-10 h-10 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-200 shadow-sm border border-gray-200 dark:border-gray-700 active:scale-95 transition-transform">
               <Search size={20} />
             </button>
           )}
           <button 
             onClick={() => setShowNotifications(true)}
-            className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-600 shadow-sm border border-gray-100 active:scale-95 transition-transform relative"
+            className="w-10 h-10 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center text-gray-600 dark:text-gray-200 shadow-sm border border-gray-200 dark:border-gray-700 active:scale-95 transition-transform relative"
           >
             <Bell size={20} />
-            {hasNewNotifs && <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border border-white animate-pulse"></span>}
+            {hasNewNotifs && <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border border-white dark:border-gray-900 animate-pulse"></span>}
           </button>
         </div>
       </div>
@@ -135,7 +135,7 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
         <div className="relative inline-block w-full">
           <button 
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className="bg-white text-gray-800 rounded-2xl py-3 px-5 flex items-center justify-between shadow-sm border border-gray-100 active:bg-gray-50 w-full"
+            className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-2xl py-3 px-5 flex items-center justify-between shadow-sm border border-gray-200 dark:border-gray-700 active:bg-gray-100 dark:active:bg-gray-700 w-full"
           >
             <div className="flex items-center gap-2">
               <span className="font-bold text-sm tracking-wide">
@@ -143,21 +143,29 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
               </span>
             </div>
             <div className="flex items-center gap-2 text-gray-400">
-               <ChevronDown size={16} className={`transform transition duration-300 ${isFilterOpen ? 'rotate-180' : ''}`} />
+               <ChevronDown size={16} className={`text-gray-400 dark:text-gray-300 transition transform ${isFilterOpen ? 'rotate-180' : ''}`} />
             </div>
           </button>
 
           {isFilterOpen && (
-            <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-xl overflow-hidden z-50 animate-slide-down border border-gray-100">
+            <div className="absolute top-full left-0 w-full mt-2 bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden z-50 border border-gray-200 dark:border-gray-700 animate-slide-down">
               <button 
                 onClick={() => { setFilterType('upcoming'); setIsFilterOpen(false); }}
-                className={`w-full text-left px-5 py-3.5 text-sm font-medium hover:bg-gray-50 flex items-center justify-between transition-colors ${filterType === 'upcoming' ? 'text-orange-600 bg-orange-50' : 'text-gray-600'}`}
+                className={`w-full text-left px-5 py-3.5 text-sm font-medium flex items-center justify-between transition-colors ${
+                  filterType === 'upcoming'
+                    ? 'text-orange-600 bg-orange-50 dark:bg-orange-900/20'
+                    : 'text-gray-600 dark:text-gray-200'
+                }`}
               >
                 Próximos {filterType === 'upcoming' && <Check size={16}/>}
               </button>
               <button 
                 onClick={() => { setFilterType('past'); setIsFilterOpen(false); }}
-                className={`w-full text-left px-5 py-3.5 text-sm font-medium hover:bg-gray-50 flex items-center justify-between transition-colors ${filterType === 'past' ? 'text-orange-600 bg-orange-50' : 'text-gray-600'}`}
+                className={`w-full text-left px-5 py-3.5 text-sm font-medium flex items-center justify-between transition-colors ${
+                  filterType === 'past'
+                    ? 'text-orange-600 bg-orange-50 dark:bg-orange-900/20'
+                    : 'text-gray-600 dark:text-gray-200'
+                }`}
               >
                 Pasados {filterType === 'past' && <Check size={16}/>}
               </button>
@@ -171,18 +179,20 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
         
         {filteredEvents.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center px-8 -mt-20">
-            <div className="bg-white p-6 rounded-3xl mb-4 shadow-sm border border-gray-100">
-              <Calendar size={32} className="text-gray-300" />
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl mb-4 shadow-sm border border-gray-200 dark:border-gray-700">
+              <Calendar size={32} className="text-gray-300 dark:text-gray-500" />
             </div>
-            <h2 className="text-lg font-bold text-gray-700 mb-1">Sin eventos</h2>
-            <p className="text-gray-400 text-sm mb-6">
+            <h2 className="text-lg font-bold text-gray-700 dark:text-gray-100 mb-1">
+              Sin eventos
+            </h2>
+            <p className="text-gray-400 dark:text-gray-300 text-sm mb-6">
               {filterType === 'upcoming' ? 'No tienes planes pronto.' : 'Historial vacío.'}
             </p>
             
             {filterType === 'upcoming' && (
               <button 
                 onClick={() => onNavigate('create')}
-                className="bg-orange-500 text-white px-6 py-3 rounded-full font-bold shadow-lg shadow-orange-200 active:scale-95 transition text-sm"
+                className="bg-orange-500 text-white px-6 py-3 rounded-full font-bold shadow-lg shadow-orange-200 dark:shadow-none active:scale-95 transition text-sm"
               >
                 Crear Evento
               </button>
@@ -216,11 +226,11 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
               }
 
               return (
-                <div 
-                  key={evt.id} 
+                <div
+                  key={evt.id}
                   onClick={() => onSelectEvent(evt)}
                   style={bgStyle}
-                  className={`snap-center shrink-0 relative overflow-hidden w-[93%] md:w-[400px] h-[78vh] rounded-[2.5rem] p-5 text-white shadow-2xl shadow-gray-300/50 cursor-pointer transform transition active:scale-[0.98] flex flex-col justify-between ${bgClass}`}
+                  className={`snap-center shrink-0 relative overflow-hidden w-[93%] md:w-[400px] h-[78vh] rounded-[2.5rem] p-5 text-white shadow-2xl shadow-gray-300/50 cursor-pointer transition active:scale-[0.98] flex flex-col justify-between ${bgClass}`}
                 >
                   
                   {/* 🆕 OVERLAY OSCURO (Solo si hay imagen personalizada) */}
@@ -301,7 +311,7 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
       {filterType === 'upcoming' && (
         <button 
           onClick={() => onNavigate('create')}
-          className="absolute bottom-6 right-6 w-14 h-14 bg-gray-900 text-white rounded-full shadow-xl flex items-center justify-center z-30 active:scale-90 transition-transform border-4 border-gray-50"
+          className="absolute bottom-6 right-6 w-14 h-14 bg-gray-900 dark:bg-gray-200 text-white dark:text-gray-900 rounded-full shadow-xl flex items-center justify-center z-30 active:scale-90 transition-transform border-4 border-gray-50 dark:border-gray-800"
         >
           <span className="text-3xl font-light leading-none pb-1">+</span>
         </button>
@@ -310,39 +320,39 @@ export default function HomePage({ user, onNavigate, onSelectEvent }) {
       {/* NOTIFICACIONES MINI */}
       {showNotifications && (
         <div className="fixed inset-0 z-50 flex justify-end animate-fade-in">
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => setShowNotifications(false)}></div>
-          <div className="relative w-full max-w-xs bg-white h-full shadow-2xl animate-slide-in-right flex flex-col border-l border-gray-100">
-            <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-              <h2 className="font-bold text-lg text-gray-800 flex items-center gap-2">
+          <div className="absolute inset-0 bg-black/20 dark:bg-black/40 backdrop-blur-sm" onClick={() => setShowNotifications(false)}></div>
+          <div className="relative w-full max-w-xs bg-white dark:bg-gray-800 h-full shadow-2xl animate-slide-in-right flex flex-col border-l border-gray-200 dark:border-gray-700">
+            <div className="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/20">
+              <h2 className="font-bold text-lg text-gray-800 dark:text-gray-100">
                 Notificaciones
               </h2>
-              <button onClick={() => setShowNotifications(false)} className="p-2 bg-white rounded-full shadow-sm text-gray-500 hover:text-gray-800 transition">
+              <button onClick={() => setShowNotifications(false)} className="p-2 bg-white dark:bg-gray-700 rounded-full shadow-sm text-gray-500 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 transition">
                 <X size={20} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50/50">
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50/50 dark:bg-gray-900/10">
               {notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 text-gray-400 opacity-70">
+                <div cclassName="flex flex-col items-center justify-center h-64 text-gray-400 dark:text-gray-300 opacity-70">
                   <Bell size={32} className="mb-3 text-gray-300" />
                   <p className="text-sm">Sin novedades</p>
                 </div>
               ) : (
                 notifications.map(notif => (
-                  <div key={notif.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-3">
+                  <div key={notif.id} className="bg-white dark:bg-gray-700 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-600 flex flex-col gap-3">
                     <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 shrink-0 font-bold text-xs">
+                      <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center text-orange-600 dark:text-orange-300 font-bold text-xs">
                         {notif.fromName?.charAt(0)}
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 leading-tight mb-1">
-                          <span className="font-bold text-gray-900">{notif.fromName}</span> te invitó a:
+                        <p className="text-xs text-gray-500 dark:text-gray-300 leading-tight mb-1">
+                          <span className="font-bold text-gray-900 dark:text-gray-100">{notif.fromName}</span> te invitó a:
                         </p>
-                        <p className="font-bold text-orange-600 text-sm">{notif.eventName}</p>
+                        <p className="font-bold text-orange-600 dark:text-orange-300 text-sm">{notif.eventName}</p>
                       </div>
                     </div>
                     <button 
                       onClick={handleQuickViewNotif} 
-                      className="w-full bg-gray-900 text-white py-2 rounded-xl text-xs font-bold active:scale-95 transition"
+                      className="w-full bg-gray-900 dark:bg-gray-200 text-white dark:text-gray-900 py-2 rounded-xl text-xs font-bold active:scale-95 transition"
                     >
                       Ver
                     </button>

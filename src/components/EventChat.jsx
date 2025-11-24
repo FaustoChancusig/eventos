@@ -72,29 +72,27 @@ export default function EventChat({ eventId, user, isConfirmed }) {
   if (!isConfirmed) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-6 text-center text-gray-500 mt-10">
-        <div className="bg-gray-200 p-6 rounded-full mb-4">
-          <Lock size={40} className="text-gray-400" />
+        <div className="bg-gray-200 dark:bg-gray-700 p-6 rounded-full mb-4 shadow">
+          <Lock size={40} className="text-gray-400 dark:text-gray-300" />
         </div>
-        <h3 className="text-lg font-bold text-gray-700">Chat Bloqueado</h3>
-        <p className="text-sm mt-2 max-w-xs">
-          Debes confirmar tu asistencia al evento para poder ver y escribir en el chat.
-        </p>
+        <h3 className="text-lg font-bold text-gray-700 dark:text-gray-100">Chat bloqueado</h3>
+        <p className="text-sm mt-2 max-w-xs text-gray-500 dark:text-gray-400">Debes confirmar tu asistencia para poder usar el chat.</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-320px)]"> 
+    <div className="flex flex-col h-[calc(100vh-320px)] bg-surface-50 dark:bg-gray-900">
       {/* Lista de Mensajes */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
         {loading ? (
           <p className="text-center text-xs text-gray-400 mt-4">Cargando chat...</p>
         ) : error ? (
-           <div className="text-center text-red-500 text-sm mt-4 p-4 bg-red-50 rounded-lg">{error}</div>
+           <div className="text-center text-red-500 text-sm mt-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg">{error}</div>
         ) : messages.length === 0 ? (
-          <div className="text-center text-gray-400 mt-10 flex flex-col items-center">
-            <MessageCircle size={32} className="mb-2 opacity-50"/>
-            <p className="text-sm">¡El chat está vacío! Di hola. 👋</p>
+          <div className="text-center text-gray-400 mt-10 flex flex-col items-center animate-fade-in">
+            <MessageCircle size={34} className="mb-2 opacity-50" />
+            <p className="text-sm text-gray-500 dark:text-gray-400">¡El chat está vacío! Di hola 👋</p>
           </div>
         ) : (
           messages.map((msg) => {
@@ -103,12 +101,13 @@ export default function EventChat({ eventId, user, isConfirmed }) {
               <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm shadow-sm ${
                   isMe 
-                    ? 'bg-purple-600 text-white rounded-tr-sm' 
-                    : 'bg-white text-gray-800 border border-gray-200 rounded-tl-sm'
+                    ? "bg-purple-600 text-white rounded-tr-sm"
+                    : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-tl-sm"
                 }`}>
-                  {!isMe && <p className="text-[10px] font-bold text-purple-600 mb-0.5">{msg.senderName}</p>}
+                  {!isMe && <p className="text-[10px] font-bold text-purple-600 dark:text-purple-300 mb-0.5">{msg.senderName}</p>}
                   <p>{msg.text}</p>
-                  <p className={`text-[9px] mt-1 text-right ${isMe ? 'text-purple-200' : 'text-gray-400'}`}>
+                  <p>{msg.text}</p>
+                  <p className={`text-[9px] mt-1 text-right ${isMe ? "text-purple-200" : "text-gray-400 dark:text-gray-500"}`}>
                     {msg.createdAt?.seconds 
                       ? new Date(msg.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                       : ''}
@@ -122,19 +121,19 @@ export default function EventChat({ eventId, user, isConfirmed }) {
       </div>
 
       {/* Input */}
-      <div className="p-3 bg-white border-t border-gray-200 pb-20 md:pb-3">
+      <div className="p-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 pb-20 md:pb-3">
         <form onSubmit={handleSendMessage} className="flex gap-2">
           <input
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Escribe un mensaje..."
-            className="flex-1 bg-gray-100 rounded-full px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-purple-200 transition"
+            className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-full px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-purple-300 dark:focus:ring-purple-700 transition"
           />
           <button 
             type="submit" 
             disabled={!newMessage.trim()}
-            className="bg-purple-600 text-white p-3 rounded-full hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-md"
+            className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-800 text-white p-3 rounded-full shadow active:scale-95 transition disabled:opacity-40"
           >
             <Send size={18} />
           </button>

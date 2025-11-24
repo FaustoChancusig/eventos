@@ -184,8 +184,8 @@ export default function MapSelectorPage({ onClose, onConfirm, initialLat, initia
                 <div className="absolute top-20 left-0 right-0 z-[3100] flex justify-center px-4 animate-[slideDown_0.4s_ease-out]">
                     <div className={`shadow-2xl border-l-4 rounded-xl p-4 flex items-start gap-3 backdrop-blur-md w-full max-w-xs transition-all duration-300 ${
                         notification.type === 'success' 
-                            ? 'bg-white/95 border-green-500 text-gray-800' 
-                            : 'bg-white/95 border-red-500 text-gray-800'
+                            ? "bg-white/95 dark:bg-gray-900 border-green-500 text-gray-800 dark:text-gray-200"
+                            : "bg-white/95 dark:bg-gray-900 border-red-500 text-gray-800 dark:text-gray-200"
                     }`}>
                         <div className="shrink-0 mt-0.5">
                             {notification.type === 'success' ? (
@@ -195,14 +195,14 @@ export default function MapSelectorPage({ onClose, onConfirm, initialLat, initia
                             )}
                         </div>
                         <div className="flex-1">
-                            <h4 className={`text-sm font-bold font-sans ${notification.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                            <h4 className={`text-sm font-bold font-sans ${notification.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                 {notification.type === 'success' ? '¡Éxito!' : 'Error'}
                             </h4>
-                            <p className="text-sm text-gray-600 font-medium leading-tight mt-0.5 font-sans">
+                            <p className="text-sm text-gray-600 dark:text-gray-300 font-medium leading-tight mt-0.5 font-sans">
                                 {notification.message}
                             </p>
                         </div>
-                        <button onClick={() => setNotification(prev => ({...prev, show: false}))} className="text-gray-400 hover:text-gray-600">
+                        <button onClick={() => setNotification(prev => ({...prev, show: false}))} className="text-gray-400 hover:text-gray-600 dark:text-gray-500">
                             <X size={18} />
                         </button>
                     </div>
@@ -217,14 +217,14 @@ export default function MapSelectorPage({ onClose, onConfirm, initialLat, initia
                     <button 
                         onClick={onClose} 
                         disabled={isLocating}
-                        className="p-3 rounded-full shadow-xl text-gray-700 active:scale-95 transition border border-gray-100 bg-white" 
+                        className="p-3 bg-white dark:bg-gray-800 dark:text-gray-200 rounded-full shadow-xl border border-gray-200 dark:border-gray-700 active:scale-95 transition"
                     >
                         <ArrowLeft size={24} />
                     </button>
 
                     {/* BUSCADOR */}
-                    <div className="flex-1 rounded-full shadow-xl flex items-center px-4 py-3 border border-gray-100 relative bg-white">
-                        <Search size={20} className="text-gray-400 mr-2" />
+                    <div className="flex-1 bg-white dark:bg-gray-800 dark:text-gray-100 rounded-full shadow-xl flex items-center px-4 py-3 border border-gray-200 dark:border-gray-700 relative">
+                        <Search size={18} className="text-gray-400 dark:text-gray-500 mr-2" />
                         <input
                             value={searchQuery}
                             onChange={(e) => handleSearch(e.target.value)}
@@ -239,13 +239,13 @@ export default function MapSelectorPage({ onClose, onConfirm, initialLat, initia
 
                 {/* SUGERENCIAS */}
                 {suggestions.length > 0 && !isLocating && (
-                    <div className="mt-2 mx-2 rounded-2xl shadow-2xl border border-gray-100 pointer-events-auto overflow-hidden flex flex-col max-h-60 bg-white">
+                    <div className="mt-2 mx-2 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden pointer-events-auto">
                         <div className="overflow-y-auto">
                             {suggestions.map((item, idx) => (
                                 // HOVER NARANJA
-                                <div key={idx} onClick={() => selectSuggestion(item)} className="p-4 border-b border-gray-50 hover:bg-orange-50 active:bg-orange-100 transition flex items-center gap-3 text-sm text-gray-700 cursor-pointer font-sans">
-                                    <MapIcon size={16} className="text-gray-400 shrink-0" />
-                                    <span className="truncate font-medium">
+                                <div key={idx} onClick={() => selectSuggestion(item)} className="p-4 border-b border-gray-100 dark:border-gray-700 hover:bg-orange-50 dark:hover:bg-gray-700 transition cursor-pointer flex gap-3">
+                                    <MapIcon size={16} className="text-gray-400 dark:text-gray-500 shrink-0" />
+                                    <span className="truncate font-medium dark:text-gray-200">
                                         {item.display_name.split(',')[0]} 
                                         <span className="text-xs text-gray-400 font-normal block truncate font-sans">
                                             {item.display_name}
@@ -267,7 +267,7 @@ export default function MapSelectorPage({ onClose, onConfirm, initialLat, initia
 
                 {/* PIN CENTRAL */}
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none flex flex-col items-center pb-[38px] z-10">
-                    <div className="px-4 py-2 rounded-full shadow-2xl text-xs font-bold mb-2 border border-gray-100 whitespace-nowrap max-w-[240px] truncate flex items-center gap-2 animate-bounce-small bg-white text-gray-800 font-sans">
+                    <div className="px-4 py-2 dark:bg-gray-800 dark:text-gray-100 rounded-full shadow-2xl text-xs font-bold mb-2 border border-gray-100 dark:border-gray-700 whitespace-nowrap max-w-[240px] truncate flex items-center gap-2 animate-bounce-small bg-white text-gray-800 font-sans">
                         <div className={`w-2 h-2 rounded-full ${isGeocoding || isLocating ? 'bg-gray-300 animate-pulse' : 'bg-green-500'}`}></div>
                         {isLocating ? "Buscando GPS..." : (address || "Mueve el mapa")}
                     </div>
@@ -281,7 +281,7 @@ export default function MapSelectorPage({ onClose, onConfirm, initialLat, initia
                     onClick={locateMe}
                     disabled={isLocating}
                     // RING NARANJA
-                    className={`absolute bottom-32 right-6 p-3 rounded-full shadow-xl text-gray-700 z-50 border border-gray-100 flex items-center justify-center transition-all bg-white ${isLocating ? 'scale-110 ring-4 ring-orange-100' : 'active:scale-95'}`}
+                    className={`absolute bottom-32 right-6 p-3 rounded-full dark:bg-gray-800 shadow-xl text-gray-700 z-50 border border-gray-100 dark:border-gray-700 flex items-center justify-center transition-all bg-white ${isLocating ? 'scale-110 ring-4 ring-orange-100' : 'active:scale-95'}`}
                     style={{ width: '50px', height: '50px' }}
                 >
                     {isLocating ? (

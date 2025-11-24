@@ -148,7 +148,7 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
   const renderContent = () => {
     if (currentTab === 'info') {
       return (
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 text-ink dark:text-slate-100">
           {/* INVITADOS */}
           <div className="mb-2">
             <div className="flex items-center justify-between mb-3 px-1">
@@ -177,7 +177,7 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
                             : themeBorderColor
                         }`}
                       >
-                        <div className="w-full h-full rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold text-xl">
+                        <div className="w-full h-full rounded-full bg-gray-200 dark:bg-slate-800 flex items-center justify-center text-gray-500 dark:text-gray-300 font-bold text-xl">
                           {guest.name.charAt(0)}
                         </div>
 
@@ -185,7 +185,7 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
                           <button
                             onClick={() => handleInvite(guest, index)}
                             disabled={invitingIndex === index}
-                            className="absolute -top-1 -right-1 w-7 h-7 bg-white text-orange-500 rounded-full shadow-md flex items-center justify-center"
+                            className="absolute -top-1 -right-1 w-7 h-7 bg-white dark:bg-slate-900 text-orange-500 rounded-full shadow-md flex items-center justify-center"
                           >
                             {invitingIndex === index ? (
                               <span className="animate-spin h-3 w-3 border-2 border-orange-500 rounded-full border-t-transparent"></span>
@@ -196,14 +196,14 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
                         )}
                       </div>
 
-                      <span className={`text-xs mt-2 font-medium ${isMe ? themeAccentColor : 'text-gray-600'}`}>
+                      <span className={`text-xs mt-2 font-medium ${isMe ? themeAccentColor : 'text-gray-600 dark:text-gray-400'}`}>
                         {isMe ? 'Tú' : guest.name.split(' ')[0]}
                       </span>
                     </div>
                   );
                 })
               ) : (
-                <p className="text-sm text-gray-400 italic py-4">
+                <p className="text-sm text-gray-400 dark:text-gray-500 italic py-4">
                   Aún no hay invitados.
                 </p>
               )}
@@ -213,21 +213,20 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
           {/* FECHA Y HORA */}
           <div className="grid grid-cols-2 gap-4">
 
-            <div className="bg-white p-5 rounded-[2rem] shadow-sm flex items-start gap-4 border border-gray-50">
+             <div className="bg-white dark:bg-slate-900 p-5 rounded-[2rem] shadow-sm flex items-start gap-4 border border-gray-50 dark:border-slate-800">
               <div className={`p-3 rounded-2xl ${themeBgColor} ${themeAccentColor}`}>
                 <Calendar size={24} />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
                   Fecha
                 </h4>
-                <p className="font-bold text-gray-800 text-lg leading-tight">
+                <p className="font-bold text-gray-800 dark:text-white text-lg leading-tight">
                   {new Date(event.date + 'T00:00:00').toLocaleDateString('es-ES', {
-                    day: 'numeric',
-                    month: 'short'
+                    day: 'numeric', month: 'short'
                   })}
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   {new Date(event.date + 'T00:00:00').toLocaleDateString('es-ES', {
                     weekday: 'long'
                   })}
@@ -235,15 +234,15 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
               </div>
             </div>
 
-            <div className="bg-white p-5 rounded-[2rem] shadow-sm flex items-start gap-4 border border-gray-50">
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-[2rem] shadow-sm flex items-start gap-4 border border-gray-50 dark:border-slate-800">
               <div className={`p-3 rounded-2xl ${themeBgColor} ${themeAccentColor}`}>
                 <Clock size={24} />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
                   Hora
                 </h4>
-                <p className="font-bold text-gray-800 text-lg leading-tight">
+                <p className="font-bold text-gray-800 dark:text-white text-lg leading-tight">
                   {event.time}
                 </p>
               </div>
@@ -252,12 +251,12 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
           </div>
 
           {/* UBICACIÓN */}
-          <div className="bg-white p-4 rounded-[2.5rem] shadow-sm border border-gray-50">
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-[2.5rem] shadow-sm border border-gray-50 dark:border-slate-800">
             <div className="flex items-center gap-3">
               <div className={`p-3 rounded-full ${themeBgColor} ${themeAccentColor}`}>
                 <MapPin size={24} />
               </div>
-              <p className="font-bold text-gray-800">
+              <p className="font-bold text-gray-800 dark:text-white">
                 {event.locationName || 'Sin ubicación'}
               </p>
             </div>
@@ -265,8 +264,8 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
 
           {/* ESTADO DEL INVITADO */}
           {!isCreator && (
-            <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-orange-100">
-              <h3 className="font-bold text-orange-900 text-lg mb-4 text-center">
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-sm border border-orange-100 dark:border-slate-800">
+              <h3 className="font-bold text-orange-900 dark:text-orange-300 text-lg mb-4 text-center">
                 ¿Asistirás al evento?
               </h3>
 
@@ -277,7 +276,7 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
                   className={`p-4 rounded-2xl flex flex-col items-center font-bold text-sm 
                     ${currentStatus === 'confirmed'
                       ? 'bg-green-500 text-white'
-                      : 'bg-gray-50 text-gray-600'
+                      : 'bg-gray-50 dark:bg-slate-800 text-gray-600 dark:text-gray-300'
                     }`}
                 >
                   <Check size={20} />
@@ -289,7 +288,7 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
                   className={`p-4 rounded-2xl flex flex-col items-center font-bold text-sm 
                     ${currentStatus === 'maybe'
                       ? 'bg-orange-400 text-white'
-                      : 'bg-gray-50 text-gray-600'
+                      : 'bg-gray-50 dark:bg-slate-800 text-gray-600 dark:text-gray-300'
                     }`}
                 >
                   <HelpCircle size={20} />
@@ -301,7 +300,7 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
                   className={`p-4 rounded-2xl flex flex-col items-center font-bold text-sm 
                     ${currentStatus === 'declined'
                       ? 'bg-gray-400 text-white'
-                      : 'bg-gray-50 text-gray-600'
+                      : 'bg-gray-50 dark:bg-slate-800 text-gray-600 dark:text-gray-300'
                     }`}
                 >
                   <X size={20} />
@@ -314,11 +313,11 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
 
           {/* DESCRIPCIÓN */}
           {event.description && (
-            <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-50 flex items-start gap-4">
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-sm border border-gray-50 dark:border-slate-800 flex items-start gap-4">
               <div className={`p-3 rounded-2xl ${themeBgColor} ${themeAccentColor}`}>
                 <AlignLeft size={24} />
               </div>
-              <p className="text-gray-700 whitespace-pre-line">
+              <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line">
                 {event.description}
               </p>
             </div>
@@ -330,14 +329,14 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
 
               <button
                 onClick={() => onEdit(event)}
-                className="bg-orange-50 p-4 rounded-[2.5rem] border border-orange-100 flex items-center gap-3 text-orange-600 font-bold"
+                className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-[2.5rem] border border-orange-100 dark:border-orange-800 flex items-center gap-3 text-orange-600 dark:text-orange-300 font-bold"
               >
                 <Edit size={20} /> Editar
               </button>
 
               <button
                 onClick={handleDelete}
-                className="bg-red-50 p-4 rounded-[2.5rem] border border-red-100 flex items-center gap-3 text-red-600 font-bold"
+                className="bg-red-50 dark:bg-red-900/20 p-4 rounded-[2.5rem] border border-red-100 dark:border-red-800 flex items-center gap-3 text-red-600 dark:text-red-300 font-bold"
               >
                 <Trash2 size={20} /> Eliminar
               </button>
@@ -366,7 +365,7 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100 animate-fade-in font-sans">
+    <div className="flex flex-col h-screen bg-gray-100 dark:bg-slate-950 animate-fade-in font-sans text-ink dark:text-slate-100">
       {/* HEADER */}
       <div
         className={`h-80 relative shrink-0 ${headerBgClass}`}
@@ -380,7 +379,7 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
         <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-center z-20">
           <button
             onClick={onBack}
-            className="bg-black/20 p-2 rounded-full text-white"
+            className="bg-black/20 dark:bg-black/30 p-2 rounded-full text-white"
           >
             <ArrowLeft size={22} />
           </button>
@@ -391,19 +390,19 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
             {isCreator && (
               <button
                 onClick={() => onEdit(event)}
-                className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full text-white border border-white/10 flex items-center justify-center"
+                className="w-10 h-10 bg-white/20 dark:bg-white/10 backdrop-blur-md rounded-full text-white border border-white/10 flex items-center justify-center"
               >
                 <Edit size={20} />
               </button>
             )}
 
             {isCreator && (
-              <div className="h-10 px-4 bg-white/20 backdrop-blur-md rounded-full text-white text-xs font-bold flex items-center gap-1 border border-white/10">
+              <div className="h-10 px-4 bg-white/20 dark:bg-white/10 backdrop-blur-md rounded-full text-white text-xs font-bold flex items-center gap-1 border border-white/10">
                 <Crown size={12} /> Admin
               </div>
             )}
 
-            <div className="h-10 px-4 bg-white/20 backdrop-blur-md rounded-full text-white text-xs font-bold uppercase tracking-wide flex items-center border border-white/10">
+            <div className="h-10 px-4 bg-white/20 dark:bg-white/10 backdrop-blur-md rounded-full text-white text-xs font-bold uppercase tracking-wide flex items-center border border-white/10">
               {event.type}
             </div>
 
@@ -417,38 +416,38 @@ export default function EventDetailPage({ event, user, onBack, onEdit }) {
       </div>
 
       {/* TABS */}
-      <div className="relative z-30 bg-gray-100 rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] -mt-4 pt-4 pb-0">
-        <div className="flex justify-around border-b border-gray-200 px-6">
+      <div className="relative z-30 bg-gray-100 dark:bg-slate-900 rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] dark:shadow-none -mt-4 pt-4 pb-0">
+        <div className="flex justify-around border-b border-gray-200 dark:border-slate-700 px-6">
 
           <button
             onClick={() => setCurrentTab('info')}
-            className={`flex-1 py-3 text-center font-bold text-sm border-b-2 ${
-              currentTab === 'info'
-                ? 'text-orange-600 border-orange-600'
-                : 'text-gray-400 border-transparent'
-            }`}
+            className={`flex-1 py-3 text-center font-bold text-sm border-b-2 transition-all
+              ${currentTab === 'info'
+                ? 'text-orange-600 dark:text-orange-300 border-orange-600 dark:border-orange-300'
+                : 'text-gray-400 dark:text-gray-500 border-transparent'
+              }`}
           >
             <Calendar size={18} className="inline mr-2" /> Info
           </button>
 
           <button
             onClick={() => setCurrentTab('gallery')}
-            className={`flex-1 py-3 text-center font-bold text-sm border-b-2 ${
-              currentTab === 'gallery'
-                ? 'text-orange-600 border-orange-600'
-                : 'text-gray-400 border-transparent'
-            }`}
+            className={`flex-1 py-3 text-center font-bold text-sm border-b-2 transition-all
+              ${currentTab === 'gallery'
+                ? 'text-orange-600 dark:text-orange-300 border-orange-600 dark:border-orange-300'
+                : 'text-gray-400 dark:text-gray-500 border-transparent'
+              }`}
           >
             <Image size={18} className="inline mr-2" /> Galería
           </button>
 
           <button
             onClick={() => setCurrentTab('chat')}
-            className={`flex-1 py-3 text-center font-bold text-sm border-b-2 ${
-              currentTab === 'chat'
-                ? 'text-orange-600 border-orange-600'
-                : 'text-gray-400 border-transparent'
-            }`}
+            className={`flex-1 py-3 text-center font-bold text-sm border-b-2 transition-all
+              ${currentTab === 'chat'
+                ? 'text-orange-600 dark:text-orange-300 border-orange-600 dark:border-orange-300'
+                : 'text-gray-400 dark:text-gray-500 border-transparent'
+              }`}
           >
             <MessageCircle size={18} className="inline mr-2" /> Chat
           </button>
