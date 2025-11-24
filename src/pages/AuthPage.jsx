@@ -318,7 +318,7 @@ export default function AuthPage() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 border border-gray-200 outline-none focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-100 transition-all text-sm"
-                    placeholder="Ej. AlexGamer"
+                    placeholder="¿Cómo te llamas?"
                   />
                 </div>
               </div>

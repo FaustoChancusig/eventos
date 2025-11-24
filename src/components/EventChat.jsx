@@ -3,7 +3,8 @@ import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from 
 import { db } from '../config/firebase';
 import { Send, Lock, MessageCircle } from 'lucide-react';
 
-export default function EventChat({ eventId, user, isConfirmed }) {
+// Agregamos 'className' a las props para que reciba los estilos del padre
+export default function EventChat({ eventId, user, isConfirmed, className }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -15,7 +16,6 @@ export default function EventChat({ eventId, user, isConfirmed }) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Listener mensajes
   useEffect(() => {
     if (!eventId) return;
 
@@ -50,7 +50,6 @@ export default function EventChat({ eventId, user, isConfirmed }) {
     return () => unsubscribe();
   }, [eventId, isConfirmed]);
 
-  // Enviar mensaje (sin duplicados)
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
@@ -84,7 +83,9 @@ export default function EventChat({ eventId, user, isConfirmed }) {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-320px)] bg-white dark:bg-gray-900">
+    // CORRECCIÓN 1: Quitamos el calc(...) y usamos h-full para llenar el hueco exacto que deja el padre
+    // También aceptamos 'className' por si el padre manda estilos extra
+    <div className={`flex flex-col h-full bg-white dark:bg-gray-900 ${className || ''}`}>
 
       {/* LISTA MENSAJES */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 dark:bg-gray-900">
@@ -113,17 +114,14 @@ export default function EventChat({ eventId, user, isConfirmed }) {
                   }`}
                 >
                   
-                  {/* Nombre del remitente */}
                   {!isMe && (
                     <p className="text-[10px] font-bold text-orange-600 dark:text-orange-300 mb-1">
                       {msg.senderName}
                     </p>
                   )}
 
-                  {/* Texto del mensaje (sin duplicados) */}
                   <p>{msg.text}</p>
 
-                  {/* Hora */}
                   <p
                     className={`text-[9px] mt-1 text-right ${
                       isMe ? "text-orange-200" : "text-gray-400 dark:text-gray-500"
@@ -147,7 +145,8 @@ export default function EventChat({ eventId, user, isConfirmed }) {
       </div>
 
       {/* INPUT MENSAJE */}
-      <div className="p-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 pb-20 md:pb-3">
+      {/* CORRECCIÓN 2: Quitamos 'pb-20'. Dejamos solo p-3 para que quede compacto abajo */}
+      <div className="p-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shrink-0">
         <form onSubmit={handleSendMessage} className="flex gap-2">
           <input
             type="text"
@@ -171,6 +170,7 @@ export default function EventChat({ eventId, user, isConfirmed }) {
               text-white p-3 rounded-full shadow 
               active:scale-95 transition
               disabled:opacity-40
+              shrink-0
             "
           >
             <Send size={18} />
