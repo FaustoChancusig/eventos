@@ -48,15 +48,33 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
   // 🟠 Bottom sheet de fecha/hora
   const [showDateTimeSheet, setShowDateTimeSheet] = useState(false);
 
-  const [hour, setHour] = useState("12");
+  const [hour, setHour] = useState("00");
   const [minute, setMinute] = useState("00");
+
+  // === FUNCIÓN PARA OBTENER EL DÍA SIGUIENTE EN FORMATO YYYY-MM-DD ===
+  const getTomorrowDate = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    // Formatear como YYYY-MM-DD
+    const year = tomorrow.getFullYear();
+    const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const day = String(tomorrow.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  };
+
+  // === FUNCIÓN PARA OBTENER LA HORA POR DEFECTO (00:00) ===
+  const getDefaultTime = () => {
+    return "00:00";
+  };
 
   const [formData, setFormData] = useState({
     name: '',
     type: 'Fiesta',
-    date: '',
-    time: '',
-    hour: '12',
+    date: getTomorrowDate(), // Fecha por defecto: mañana
+    time: getDefaultTime(), // Hora por defecto: 00:00
+    hour: '00',
     minute: '00',
     description: '',
     locationName: '',
@@ -70,8 +88,8 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
       setFormData({
         name: eventToEdit.name || '',
         type: eventToEdit.type || 'Fiesta',
-        date: eventToEdit.date || '',
-        time: eventToEdit.time || '',
+        date: eventToEdit.date || getTomorrowDate(),
+        time: eventToEdit.time || getDefaultTime(),
         description: eventToEdit.description || '',
         locationName: eventToEdit.locationName || '',
         lat: eventToEdit.lat || null,
@@ -80,8 +98,13 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
 
       if (eventToEdit.time) {
         const [h, m] = eventToEdit.time.split(":");
-        setHour(h ?? "12");
+        setHour(h ?? "00");
         setMinute(m ?? "00");
+      } else {
+        // Si no hay hora en el evento editado, usar la por defecto
+        const [h, m] = getDefaultTime().split(":");
+        setHour(h);
+        setMinute(m);
       }
 
       if (eventToEdit.background) {
@@ -91,6 +114,21 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
           file: null
         });
       }
+    } else {
+      // Si es un evento nuevo, asegurarse de que la fecha sea mañana
+      const tomorrow = getTomorrowDate();
+      const [h, m] = getDefaultTime().split(":");
+      
+      setFormData(prev => ({
+        ...prev,
+        date: tomorrow,
+        time: getDefaultTime(),
+        hour: h,
+        minute: m
+      }));
+      
+      setHour(h);
+      setMinute(m);
     }
   }, [eventToEdit]);
 
@@ -103,7 +141,6 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
     });
     return () => unsubscribe();
   }, [user]);
-
 
   // === Agregar etiqueta ===
   const handleAddTag = async () => {
@@ -181,7 +218,6 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
     if (locationError) setLocationError(null);
   };
 
-
   /* ============================================================
       Helper: Redimensionar imagen ANTES de subir
      ============================================================ */
@@ -242,7 +278,6 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
     });
   };
 
-
   /* ============================================================
       VALIDACIÓN INDIVIDUAL + BLOQUEO FECHAS Y HORAS PASADAS
      ============================================================ */
@@ -264,7 +299,7 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
     }
 
     if (!formData.date) {
-      setDateError("Selecciona una fecha.");
+      setDateError("Selecciona una fecha y/o fecha.");
       hasError = true;
     }
 
@@ -293,7 +328,6 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
 
     setShowPreview(true);
   };
-
 
   /* ============================================================
       PUBLICAR EVENTO
@@ -401,7 +435,6 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
     }
   };
 
-
   /* ============================================================
     Helpers visuales: etiquetas de fecha/hora para el botón
      ============================================================ */
@@ -420,9 +453,11 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
 
   const today = new Date();
   const todayStr = today.toLocaleDateString("en-CA"); // formato YYYY-MM-DD
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  const tomorrowStr = tomorrow.toLocaleDateString("en-CA"); // fecha de mañana
 
   const minTimeToday = new Date().toTimeString().slice(0, 5); // HH:MM actual
-
 
   /* ============================================================
       ======================= RENDER ==============================
@@ -488,7 +523,6 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
               )}
 
               {/* === Etiquetas === */}
-              {/* FIX: Se agregó flex-wrap y w-full para evitar overflow horizontal */}
               <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-surface-200 dark:border-slate-800 w-full">
 
                 <div className="flex flex-wrap justify-between items-center mb-3 gap-2">
@@ -568,7 +602,7 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
               </div>
             </div>
 
-            {/* === Fecha y hora (con bottom sheet) === */}
+            {/* === Fecha y hora (con bottom sheet) - MEJORADA ESTÉTICAMENTE === */}
             <div className="space-y-2">
               <h3 className="text-xs font-bold text-ink/40 dark:text-slate-400 uppercase tracking-wider">Fecha y Hora</h3>
 
@@ -578,41 +612,85 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
                 </p>
               )}
 
-              <button
-                type="button"
-                onClick={() => setShowDateTimeSheet(true)}
-                className="
-                  w-full bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-surface-200 dark:border-slate-800
-                  flex items-center justify-between px-4 py-4 active:scale-95 transition
-                "
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-primary-100 text-primary-700">
-                    <Calendar size={20} />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-xs text-ink/40 dark:text-slate-400 font-bold uppercase mb-0.5">Fecha</p>
-                    <p className="text-sm font-semibold text-ink dark:text-slate-100">
-                      {formatDateLabel()}
-                    </p>
-                  </div>
+              <div className="grid grid-cols-2 gap-3">
+                {/* FECHA - TARJETA MEJORADA */}
+                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-surface-200 dark:border-slate-800 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setShowDateTimeSheet(true)}
+                    className="w-full text-left p-4 active:scale-95 transition-transform"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 rounded-xl bg-gradient-to-br from-orange-100 to-orange-50 dark:from-orange-900/30 dark:to-orange-800/20">
+                        <Calendar size={20} className="text-orange-600 dark:text-orange-400" />
+                      </div>
+                      <span className="text-xs font-bold text-ink/60 dark:text-slate-400 uppercase">Fecha</span>
+                    </div>
+                    
+                    <div className="ml-11">
+                      {formData.date ? (
+                        <>
+                          <div className="text-lg font-bold text-ink dark:text-slate-100 leading-tight">
+                            {new Date(formData.date + 'T00:00:00').toLocaleDateString('es-ES', { 
+                              day: 'numeric', 
+                              month: 'short'
+                            })}
+                          </div>
+                          <div className="text-sm text-ink/60 dark:text-slate-400 mt-1">
+                            {new Date(formData.date + 'T00:00:00').toLocaleDateString('es-ES', { 
+                              weekday: 'long' 
+                            })}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-lg font-medium text-ink/50 dark:text-slate-500 italic">
+                          Elegir fecha
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="mt-3 text-[10px] text-orange-600 dark:text-orange-400 font-bold flex items-center gap-1">
+                      <Calendar size={10} /> Toca para cambiar
+                    </div>
+                  </button>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-px bg-surface-300 dark:bg-slate-700" />
-                  <div className="flex items-center gap-2">
-                    <div className="p-2 rounded-full bg-primary-50 text-primary-600">
-                      <Clock size={18} />
+                {/* HORA - TARJETA MEJORADA */}
+                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-surface-200 dark:border-slate-800 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setShowDateTimeSheet(true)}
+                    className="w-full text-left p-4 active:scale-95 transition-transform"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 rounded-xl bg-gradient-to-br from-orange-100 to-orange-50 dark:from-orange-900/30 dark:to-orange-800/20">
+                        <Clock size={20} className="text-orange-600 dark:text-orange-400" />
+                      </div>
+                      <span className="text-xs font-bold text-ink/60 dark:text-slate-400 uppercase">Hora</span>
                     </div>
-                    <div className="text-left">
-                      <p className="text-xs text-ink/40 dark:text-slate-400 font-bold uppercase mb-0.5">Hora</p>
-                      <p className="text-sm font-semibold text-ink dark:text-slate-100">
-                        {formatTimeLabel()}
-                      </p>
+                    
+                    <div className="ml-11">
+                      {formData.time ? (
+                        <>
+                          <div className="text-lg font-bold text-ink dark:text-slate-100 leading-tight flex items-baseline gap-1">
+                            <span className="text-2xl">{hour}</span>
+                            <span className="text-ink/40 dark:text-slate-500">:</span>
+                            <span className="text-2xl">{minute}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-lg font-medium text-ink/50 dark:text-slate-500 italic">
+                          Elegir hora
+                        </div>
+                      )}
                     </div>
-                  </div>
+                    
+                    <div className="mt-3 text-[10px] text-orange-600 dark:text-orange-400 font-bold flex items-center gap-1">
+                      <Clock size={10} /> Toca para cambiar
+                    </div>
+                  </button>
                 </div>
-              </button>
+              </div>
             </div>
 
             {/* === Ubicación === */}
@@ -712,155 +790,205 @@ export default function CreateEventPage({ user, onBack, eventToEdit }) {
             />
           )}
 
-          {/* 🟠 Bottom Sheet de Fecha y Hora */}
+          {/* 🟠 Bottom Sheet de Fecha y Hora - MEJORADO ESTÉTICAMENTE */}
           {showDateTimeSheet && (
-            <div className="fixed inset-0 z-[120] flex flex-col justify-end bg-black/40 backdrop-blur-sm">
+            <div className="fixed inset-0 z-[120] flex flex-col justify-end bg-black/40 backdrop-blur-sm animate-fade-in">
               <div
                 className="
-                  bg-white dark:bg-slate-900 rounded-t-3xl shadow-xl p-4 pt-3 
+                  bg-white dark:bg-slate-900 rounded-t-3xl shadow-xl p-6 pt-4 
                   animate-[bottomSheet_0.25s_cubic-bezier(.28,.8,.32,1)]
+                  max-h-[85vh] overflow-y-auto
                 "
               >
-                <div className="w-12 h-1.5 bg-surface-300 dark:bg-slate-700 rounded-full mx-auto mb-3" />
+                {/* Handle */}
+                <div className="flex justify-center mb-4">
+                  <div className="w-12 h-1.5 bg-surface-300 dark:bg-slate-700 rounded-full" />
+                </div>
 
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-bold text-ink dark:text-slate-100 uppercase tracking-wide">
-                    Fecha y Hora del evento
+                {/* Header */}
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-bold text-ink dark:text-slate-100">
+                    Configurar fecha y hora
                   </h3>
-
                   <button
                     type="button"
                     onClick={() => setShowDateTimeSheet(false)}
                     className="p-2 rounded-full hover:bg-surface-100 dark:hover:bg-slate-800 active:scale-95"
                   >
-                    <X size={18} className="text-ink/60" />
+                    <X size={20} className="text-ink/60 dark:text-slate-400" />
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="space-y-6">
                   {/* FECHA */}
-                  <div className="bg-surface-50 dark:bg-slate-900/70 p-3 rounded-2xl border border-surface-200 dark:border-slate-700">
-                    <div className="flex items-center gap-2 mb-2 text-primary-700">
-                      <Calendar size={18} />
-                      <span className="text-xs font-bold uppercase">FECHA</span>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded-lg bg-orange-50 dark:bg-orange-900/20">
+                        <Calendar size={18} className="text-orange-600 dark:text-orange-400" />
+                      </div>
+                      <span className="text-sm font-bold text-ink dark:text-slate-100">Fecha del evento</span>
                     </div>
-                    <input
-                      type="date"
-                      name="date"
-                      value={formData.date}
-                      min={todayStr} // Bloquea fechas pasadas
-                      onChange={(e) => {
-                        setFormData({ ...formData, date: e.target.value });
-                        if (dateError) setDateError(null);
-                        if (timeError) setTimeError(null);
-                      }}
-                      className="w-full outline-none text-ink dark:text-slate-100 bg-transparent text-sm"
-                    />
-                  </div>
-
-                  {/* HORA - SCROLL CON BLOQUEO HOY */}
-                  <div className="bg-surface-50 dark:bg-slate-900/70 p-3 rounded-2xl border border-surface-200 dark:border-slate-700">
-                    <div className="flex items-center gap-2 mb-2 text-primary-700">
-                      <Clock size={18} />
-                      <span className="text-xs font-bold uppercase">HORA</span>
+                    
+                    <div className="bg-surface-50 dark:bg-slate-900/70 p-4 rounded-2xl border-2 border-surface-200 dark:border-slate-700">
+                      <input
+                        type="date"
+                        name="date"
+                        value={formData.date}
+                        min={todayStr}
+                        onChange={(e) => {
+                          setFormData({ ...formData, date: e.target.value });
+                          if (dateError) setDateError(null);
+                          if (timeError) setTimeError(null);
+                        }}
+                        className="w-full outline-none text-ink dark:text-slate-100 bg-transparent text-base font-medium"
+                      />
                     </div>
-
-                    <div className="flex items-center gap-3 justify-center">
-                      {/* HORAS */}
-                      <div className="flex-1">
-                        <div className="text-[10px] uppercase font-semibold text-ink/50 dark:text-slate-400 mb-1 text-center">
-                          Horas
-                        </div>
-                        <div className="h-40 overflow-y-auto rounded-2xl bg-surface-100 dark:bg-slate-800 border border-surface-200 dark:border-slate-700 py-1">
-                          {Array.from({ length: 24 }).map((_, i) => {
-                            const value = String(i).padStart(2, '0');
-                            const isActive = value === hour;
-                            const currentHour = minTimeToday.split(':')[0];
-                            const disabledToday =
-                              formData.date === todayStr && value < currentHour;
-
-                            return (
-                              <button
-                                key={value}
-                                type="button"
-                                disabled={disabledToday}
-                                onClick={() => {
-                                  if (disabledToday) return;
-                                  setHour(value);
-                                  setFormData(prev => ({ ...prev, time: `${value}:${minute}` }));
-                                  if (timeError) setTimeError(null);
-                                }}
-                                className={`
-                                  w-full py-2 text-sm font-semibold flex items-center justify-center
-                                  transition
-                                  ${isActive
-                                    ? 'bg-primary-500 text-white'
-                                    : 'text-ink/70 dark:text-slate-200 hover:bg-surface-200 dark:hover:bg-slate-700'}
-                                  ${disabledToday ? 'opacity-30 cursor-not-allowed hover:bg-transparent' : ''}
-                                `}
-                              >
-                                {value}
-                              </button>
-                            );
-                          })}
+                    
+                    {formData.date && (
+                      <div className="text-center">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-surface-100 dark:bg-slate-800 rounded-full">
+                          <Calendar size={14} className="text-ink/60 dark:text-slate-400" />
+                          <span className="text-sm text-ink dark:text-slate-100 font-medium">
+                            {new Date(formData.date + 'T00:00:00').toLocaleDateString('es-ES', { 
+                              weekday: 'long', 
+                              day: 'numeric', 
+                              month: 'long',
+                              year: 'numeric'
+                            })}
+                          </span>
                         </div>
                       </div>
+                    )}
+                  </div>
 
-                      <span className="font-bold text-ink/80 dark:text-slate-200 text-lg">:</span>
+                  {/* SEPARADOR */}
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-surface-200 dark:border-slate-700"></div>
+                    </div>
+                    <div className="relative flex justify-center">
+                      <span className="px-3 bg-white dark:bg-slate-900 text-sm text-ink/50 dark:text-slate-500 font-medium">Y</span>
+                    </div>
+                  </div>
 
-                      {/* MINUTOS */}
-                      <div className="flex-1">
-                        <div className="text-[10px] uppercase font-semibold text-ink/50 dark:text-slate-400 mb-1 text-center">
-                          Minutos
+                  {/* HORA */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded-lg bg-orange-50 dark:bg-orange-900/20">
+                        <Clock size={18} className="text-orange-600 dark:text-orange-400" />
+                      </div>
+                      <span className="text-sm font-bold text-ink dark:text-slate-100">Hora del evento</span>
+                    </div>
+
+                    <div className="bg-surface-50 dark:bg-slate-900/70 p-4 rounded-2xl border-2 border-surface-200 dark:border-slate-700">
+                      <div className="flex items-center justify-center gap-6">
+                        {/* HORAS */}
+                        <div className="flex-1 text-center">
+                          <div className="text-xs font-bold text-ink/50 dark:text-slate-400 uppercase tracking-wider mb-3">
+                            Horas
+                          </div>
+                          <div className="h-48 overflow-y-auto rounded-xl bg-surface-100 dark:bg-slate-800 border border-surface-200 dark:border-slate-700 py-2 scrollbar-thin">
+                            {Array.from({ length: 24 }).map((_, i) => {
+                              const value = String(i).padStart(2, '0');
+                              const isActive = value === hour;
+                              const currentHour = minTimeToday.split(':')[0];
+                              const disabledToday =
+                                formData.date === todayStr && value < currentHour;
+                              const disabledTomorrow =
+                                formData.date === tomorrowStr && value < "00";
+
+                              return (
+                                <button
+                                  key={value}
+                                  type="button"
+                                  disabled={disabledToday || disabledTomorrow}
+                                  onClick={() => {
+                                    if (disabledToday || disabledTomorrow) return;
+                                    setHour(value);
+                                    setFormData(prev => ({ ...prev, time: `${value}:${minute}` }));
+                                    if (timeError) setTimeError(null);
+                                  }}
+                                  className={`
+                                    w-full py-3 text-base font-semibold flex items-center justify-center
+                                    transition-all duration-200
+                                    ${isActive
+                                      ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md rounded-lg mx-1'
+                                      : 'text-ink/70 dark:text-slate-200 hover:bg-surface-200 dark:hover:bg-slate-700'}
+                                    ${disabledToday || disabledTomorrow ? 'opacity-30 cursor-not-allowed hover:bg-transparent' : ''}
+                                  `}
+                                >
+                                  {value}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                        <div className="h-40 overflow-y-auto rounded-2xl bg-surface-100 dark:bg-slate-800 border border-surface-200 dark:border-slate-700 py-1">
-                          {Array.from({ length: 60 }).map((_, i) => {
-                            const m = String(i).padStart(2, '0');
-                            const isActive = m === minute;
-                            const disabledToday =
-                              formData.date === todayStr &&
-                              `${hour}:${m}` < minTimeToday;
 
-                            return (
-                              <button
-                                key={m}
-                                type="button"
-                                disabled={disabledToday}
-                                onClick={() => {
-                                  if (disabledToday) return;
-                                  setMinute(m);
-                                  setFormData(prev => ({ ...prev, time: `${hour}:${m}` }));
-                                  if (timeError) setTimeError(null);
-                                }}
-                                className={`
-                                  w-full py-2 text-sm font-semibold flex items-center justify-center transition
-                                  ${isActive
-                                    ? 'bg-primary-500 text-white'
-                                    : 'text-ink/70 dark:text-slate-200 hover:bg-surface-200 dark:hover:bg-slate-700'}
-                                  ${disabledToday ? 'opacity-30 cursor-not-allowed hover:bg-transparent' : ''}
-                                `}
-                              >
-                                {m}
-                              </button>
-                            );
-                          })}
+                        {/* SEPARADOR HORAS:MINUTOS */}
+                        <div className="flex flex-col items-center">
+                          <div className="h-12 w-0.5 bg-surface-300 dark:bg-slate-700"></div>
+                          <span className="text-2xl font-bold text-ink/80 dark:text-slate-200 my-2">:</span>
+                          <div className="h-12 w-0.5 bg-surface-300 dark:bg-slate-700"></div>
+                        </div>
+
+                        {/* MINUTOS COMPLETOS (00-59) */}
+                        <div className="flex-1 text-center">
+                          <div className="text-xs font-bold text-ink/50 dark:text-slate-400 uppercase tracking-wider mb-3">
+                            Minutos
+                          </div>
+                          <div className="h-48 overflow-y-auto rounded-xl bg-surface-100 dark:bg-slate-800 border border-surface-200 dark:border-slate-700 py-2 scrollbar-thin">
+                            {Array.from({ length: 60 }).map((_, i) => {
+                              const m = String(i).padStart(2, '0');
+                              const isActive = m === minute;
+                              const disabledToday =
+                                formData.date === todayStr &&
+                                `${hour}:${m}` < minTimeToday;
+                              const disabledTomorrow =
+                                formData.date === tomorrowStr &&
+                                `${hour}:${m}` < "00:00";
+
+                              return (
+                                <button
+                                  key={m}
+                                  type="button"
+                                  disabled={disabledToday || disabledTomorrow}
+                                  onClick={() => {
+                                    if (disabledToday || disabledTomorrow) return;
+                                    setMinute(m);
+                                    setFormData(prev => ({ ...prev, time: `${hour}:${m}` }));
+                                    if (timeError) setTimeError(null);
+                                  }}
+                                  className={`
+                                    w-full py-3 text-base font-semibold flex items-center justify-center
+                                    transition-all duration-200
+                                    ${isActive
+                                      ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md rounded-lg mx-1'
+                                      : 'text-ink/70 dark:text-slate-200 hover:bg-surface-200 dark:hover:bg-slate-700'}
+                                    ${disabledToday || disabledTomorrow ? 'opacity-30 cursor-not-allowed hover:bg-transparent' : ''}
+                                  `}
+                                >
+                                  {m}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
+                {/* BOTÓN CONFIRMAR */}
                 <button
                   type="button"
                   onClick={() => setShowDateTimeSheet(false)}
                   className="
-                    w-full bg-primary-500 hover:bg-primary-600 
-                    dark:bg-primary-500 dark:hover:bg-primary-400
-                    text-white 
-                    font-bold py-3 rounded-xl active:scale-95 transition
+                    w-full bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 
+                    dark:from-primary-500 dark:to-primary-600 dark:hover:from-primary-600 dark:hover:to-primary-700
+                    text-white font-bold py-4 rounded-xl active:scale-95 transition mt-8 shadow-lg
                   "
                 >
-                  Confirmar
+                  Confirmar fecha y hora
                 </button>
               </div>
             </div>
